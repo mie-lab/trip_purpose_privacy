@@ -150,30 +150,58 @@ def get_coarse_purpose_category(p):
     return further_agg_dict[fine_cat]
 
 
-# group purposes
-further_agg_dict = {
-    "arts": "leisure",
-    "church": "leisure",
-    "nightlife": "leisure",
-    "travel": "leisure",
-    "vacation": "leisure",
-    "other": "leisure",
-    "outdoor_city": "leisure",
-    "residential": "leisure",
-    "restaurant": "leisure",
-    "shop": "shop",
-    "doctor": "shop",
-    "home": "home",
-    "office": "work",
-    "work": "work",
-    "school": "work",
-    "sport": "leisure",
+osm_poi_mapping = {
+    "grocery": "shop",
+    "disused:pub": "nightlife",
+    "concert_hall": "arts",
+    "research_institute": "education",
+    "monastery": "church",
+    "coffee;tea": "restaurant",
+    "coffee": "restaurant",
+    "meditation_centre": "church",
+    "farm": "outdoor_city",
+    "biergarten": "restaurant",
+    "language_school": "education",
+    "religion": "church",
+    "stripclub": "nightlife",
+    "music_venue": "arts",
+    "surf": "sport",
+    "grass": "outdoor_city",
+    "outdoor_seating": "outdoor_city",
+    "health_food": "restaurant",
+    "supermarket,bakery": "shop",
+    "tourism": "outdoor_city",
+    "clothing store": "shop",
+    "religious": "church",
+    "plaza": "outdoor_city",
+    "water_sports": "sport",
+    "drinks": "nightlife",
+    "farmers_market": "shop",
+    "laundry;dry_cleaning": "residential",
+    "bench": "outdoor_city",
+    "restaurant": "restaurant",
+    "school": "education",
+    "fast_food": "restaurant",
+    "place_of_worship": "church",
+    "cafe": "restaurant",
+    "convenience": "shop",
+    "deli": "shop",
+    "supermarket": "shop",
+    "pharmacy": "shop",
+    "social_facility": "education",
+    "pub": "nightlife",
+    "sports": "sport",
+    "food_court": "restaurant",
+    "university": "education",
+    "college": "education",
+    "ferry_terminal": "travel",
+    "art": "arts",
+    "nightclub": "nightlife",
+    "mall": "shop",
+    "bus_station": "travel",
+    "clinic;doctors": "doctor",
+    "cafe;bar": "restaurant",
 }
-
-
-def get_coarse_purpose_category(p):
-    fine_cat = get_purpose_category(p)
-    return further_agg_dict[fine_cat]
 
 
 def get_purpose_category(p):
@@ -245,18 +273,12 @@ def get_purpose_category(p):
         return "shop"
     elif "bar" in low or "disco" in low or "club" in low or "nightlife" in low or "speakeasy" in low:
         return "nightlife"
-#     elif "home" in low:
-#         return "home"
-#     elif "residential" in low or "building" in low or "neighborhood" in low:
-#         return "residential"
+    #     elif "home" in low:
+    #         return "home"
+    #     elif "residential" in low or "building" in low or "neighborhood" in low:
+    #         return "residential"
     # new version:
-    elif (
-        "residential" in low
-        or "building" in low
-        or "neighborhood" in low
-        or "garden" in low
-        or "home" in low
-    ):
+    elif "residential" in low or "building" in low or "neighborhood" in low or "garden" in low or "home" in low:
         return "residential"
     elif (
         "entertain" in low
@@ -294,8 +316,8 @@ def get_purpose_category(p):
         return "education"
     elif "church" in low or "mosque" in low or "spiritual" in low:
         return "church"
-#     elif "vacation" in low or "hotel" in low or "beach" in low or "tourist" in low or "bed &" in low:
-#         return "vacation"
+    #     elif "vacation" in low or "hotel" in low or "beach" in low or "tourist" in low or "bed &" in low:
+    #         return "vacation"
     # TODO: what about vaction / hotel / beach etc?
     elif (
         "city" in low
@@ -314,8 +336,8 @@ def get_purpose_category(p):
     ):
         return "outdoor_city"
     # TODO: leisure seems to generic now. where is leisure done?
-#     elif low == "leisure":
-#         return "leisure"
+    #     elif low == "leisure":
+    #         return "leisure"
     else:
         return "other"
 

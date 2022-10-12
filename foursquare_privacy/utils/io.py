@@ -16,9 +16,10 @@ def txt_to_df(path, encoding="utf-8"):
 
 
 def read_gdf_csv(path):
-    data = pd.read_csv("../data/foursquare_nyc.csv", index_col="id")
+    data = pd.read_csv(path, index_col="id")
     data = gpd.GeoDataFrame(data)
     data["geometry"] = data["geometry"].apply(wkt.loads)
     data.crs = "EPSG:4326"
     data["local_time"] = pd.to_datetime(data["local_time"])
+    data = data[data["label"] != "other"]
     return data
