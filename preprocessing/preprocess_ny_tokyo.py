@@ -53,6 +53,7 @@ for city in ["NYC", "TKY"]:
     df.rename(
         columns=column_mapping, inplace=True,
     )
+    df.index.name = "id"
 
     # get datetime object
     df["time"] = df["utc_time"].str[4:-10]
@@ -66,11 +67,18 @@ for city in ["NYC", "TKY"]:
     # get label
     df["label"] = df["category"].apply(get_purpose_category)
 
+    # drop the ones that have more than one label at the same location
+    prev_len = len(df)
+    grouped_by_geom = df.reset_index().groupby(["latitude", "longitude"]).agg({"label": "nunique", "id": list})
+    id_lists_with_several_labels = grouped_by_geom[grouped_by_geom["label"] > 1]["id"].values
+    id_lists_with_several_labels = [id_ for id_list in id_lists_with_several_labels for id_ in id_list]  # flat list
+    df = df[~df.index.isin(id_lists_with_several_labels)]
+    print(f"Removed {prev_len - len(df)} records because the venue had multiple labels")
+
     # to gdf
     gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df["longitude"], df["latitude"]), crs="epsg:4326")
     gdf["geometry"] = gdf["geometry"].apply(wkt.dumps)
 
     # save
-    gdf.index.name = "id"
     gdf.to_csv(os.path.join("data", f"foursquare_{city.lower()}.csv"))
     print("Saved to file", city, "number records", len(gdf))

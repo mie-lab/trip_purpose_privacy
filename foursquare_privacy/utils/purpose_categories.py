@@ -278,7 +278,14 @@ def get_purpose_category(p):
     #     elif "residential" in low or "building" in low or "neighborhood" in low:
     #         return "residential"
     # new version:
-    elif "residential" in low or "building" in low or "neighborhood" in low or "garden" in low or "home" in low:
+    elif (
+        "city" in low
+        or "residential" in low
+        or "building" in low
+        or "neighborhood" in low
+        or "garden" in low
+        or "home" in low
+    ):
         return "residential"
     elif (
         "entertain" in low
@@ -320,8 +327,7 @@ def get_purpose_category(p):
     #         return "vacation"
     # TODO: what about vaction / hotel / beach etc?
     elif (
-        "city" in low
-        or "park" in low
+        "park" in low
         or "plaza" in low
         or "bridge" in low
         or "outdoors" in low
