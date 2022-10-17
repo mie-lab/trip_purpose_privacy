@@ -8,10 +8,12 @@ from foursquare_privacy.add_poi import POI_processor
 from foursquare_privacy.plotting import confusion_matrix, plot_confusion_matrix
 
 if __name__ == "__main__":
-    data = read_gdf_csv(os.path.join("data", "foursquare_nyc.csv"))
+    city = "tokyo"
+    data = read_gdf_csv(os.path.join("data", f"foursquare_{city}.csv"))
+    poi_path = os.path.join("data", f"pois_{city}_labelled.geojson")
 
     # get poi features
-    poi_process = POI_processor(data)
+    poi_process = POI_processor(data, poi_path=poi_path)
     poi_process()
     distance_features = poi_process.distance_count_features()
     lda_features = poi_process.lda_features()

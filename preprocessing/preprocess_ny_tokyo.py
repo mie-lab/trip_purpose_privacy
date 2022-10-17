@@ -47,6 +47,8 @@ column_mapping = {
     7: "utc_time",
 }
 
+name_mapping = {"NYC": "newyorkcity", "TKY": "tokyo"}
+
 for city in ["NYC", "TKY"]:
     df = txt_to_df(os.path.join("data", "foursquare_ny_tokio_raw", f"dataset_TSMC2014_{city}.txt"), encoding="latin-1")
     # rename categories
@@ -80,5 +82,5 @@ for city in ["NYC", "TKY"]:
     gdf["geometry"] = gdf["geometry"].apply(wkt.dumps)
 
     # save
-    gdf.to_csv(os.path.join("data", f"foursquare_{city.lower()}.csv"))
+    gdf.to_csv(os.path.join("data", f"foursquare_{name_mapping[city]}.csv"))
     print("Saved to file", city, "number records", len(gdf))

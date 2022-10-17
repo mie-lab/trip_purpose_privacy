@@ -24,7 +24,7 @@ def read_gdf_csv(path):
         print("Projecting into NYC CRS")
         data.to_crs("EPSG:32118", inplace=True)
     elif "tokyo" in path or "tky" in path:
-        print("Projecting into NYC CRS")
+        print("Projecting into TKY CRS")
         data.to_crs("EPSG:30169", inplace=True)
     else:
         raise RuntimeError("Can only handly ny or tky")
@@ -44,6 +44,6 @@ def read_poi_geojson(path):
         print("Projecting POIs into NYC CRS")
         gdf.to_crs("EPSG:32118", inplace=True)
     elif "tokyo" in path or "tky" in path:
-        print("Projecting POIs into NYC CRS")
+        print("Projecting POIs into TKY CRS")
         gdf.to_crs("EPSG:30169", inplace=True)
     return gdf

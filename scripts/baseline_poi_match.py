@@ -6,9 +6,10 @@ from foursquare_privacy.utils.io import read_gdf_csv, read_poi_geojson
 from foursquare_privacy.plotting import plot_confusion_matrix
 
 if __name__ == "__main__":
+    city = "newyorkcity"
     # lod pois and data
-    pois = read_poi_geojson(os.path.join("data", "pois_newyorkcity_labelled.geojson"))
-    data = read_gdf_csv(os.path.join("data", "foursquare_nyc.csv"))
+    pois = read_poi_geojson(os.path.join("data", f"pois_{city}_labelled.geojson"))
+    data = read_gdf_csv(os.path.join("data", f"foursquare_{city}.csv"))
 
     # double check that all are zero
     # grouped_test = data.groupby(["longitude", "latitude"]).agg({"label": "nunique"})

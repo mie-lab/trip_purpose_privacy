@@ -15,7 +15,7 @@ class POI_processor:
 
         self.poi = read_poi_geojson(poi_path)
 
-        assert self.poi.crs == self.data.crs, "must be in the same CRS"
+        assert self.poi.crs == self.data.crs, f"must be in the same CRS, poi: {self.poi.crs}, data: {self.data.crs}"
 
     def __call__(self, buffer=200):
         self.buffer = buffer
