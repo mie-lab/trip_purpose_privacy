@@ -1,6 +1,7 @@
 # project specific
 data/
 figures/
+trained_models/
 *.code-workspace
 api_key.json 
 .DS_Store
