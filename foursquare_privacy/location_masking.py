@@ -17,14 +17,16 @@ class LocationMasker:
         masking_factor : int, optional
             Perturbation in meter, by default 20
         """
+        data_masked = self.data.copy()
         # make random unit vectors and scale by masking factor
-        translation = np.random.rand(len(self.data), 2) - 0.5
-        translation = translation / np.expand_dims(np.linalg.norm(translation, axis=1), 1)
+        translation = np.random.rand(len(data_masked), 2) - 0.5
+        translation = translation / np.expand_dims(np.linalg.norm(translation, axis=1), 1) * masking_factor
 
-        self.data["lat_masked"] = self.data["latitude"].values + translation[:, 0]
-        self.data["lon_masked"] = self.data["longitude"].values + translation[:, 1]
+        data_masked["latitude"] = data_masked["latitude"].values + translation[:, 0]
+        data_masked["longitude"] = data_masked["longitude"].values + translation[:, 1]
 
         # update geometry
-        orig_crs = self.data.crs
-        self.data.geometry = gpd.points_from_xy(x=self.data["lon_masked"], y=self.data["lat_masked"])
-        self.data.crs = orig_crs
+        orig_crs = data_masked.crs
+        data_masked.geometry = gpd.points_from_xy(x=data_masked["longitude"], y=data_masked["latitude"])
+        data_masked.crs = orig_crs
+        return data_masked

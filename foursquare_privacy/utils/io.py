@@ -32,7 +32,7 @@ def read_gdf_csv(path):
     data["longitude"] = data["geometry"].x
     data["latitude"] = data["geometry"].y
     # add datetime
-    data["local_time"] = pd.to_datetime(data["local_time"])
+    # data["local_time"] = pd.to_datetime(data["local_time"])
     data = data[data["label"] != "other"]
     return data
 
