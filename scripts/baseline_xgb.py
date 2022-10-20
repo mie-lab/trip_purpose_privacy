@@ -1,7 +1,9 @@
 import json
+from multiprocessing.sharedctypes import Value
 import os
 import pandas as pd
 import xgboost
+import argparse
 import numpy as np
 from sklearn.metrics import accuracy_score, balanced_accuracy_score
 
@@ -12,11 +14,8 @@ from foursquare_privacy.add_poi import POI_processor
 from foursquare_privacy.plotting import confusion_matrix, plot_confusion_matrix
 from foursquare_privacy.location_masking import LocationMasker
 
-KFOLD = 4
-OUT_NAME = "xgb_test"
 
-
-def cross_validation(dataset):
+def cross_validation(dataset, kfold):
     # get features and labels
     features = dataset[[col for col in dataset.columns if col.startswith("feat")]]
     # print("List of features", features.columns)
@@ -25,7 +24,7 @@ def cross_validation(dataset):
     label_mapping = {u: i for i, u in enumerate(uni_labels)}
     labels = dataset["label"].map(label_mapping)
 
-    folds = spatial_split(dataset, KFOLD)
+    folds = spatial_split(dataset, kfold)
     # print("Fold lengths", [len(f) for f in folds])
 
     result_df = dataset[["user_id", "venue_id", "label"]].copy()
@@ -61,17 +60,24 @@ def print_results(result_df, name):
 results_dict = {}
 
 if __name__ == "__main__":
-    city = "newyorkcity"
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-c", "--city", default="newyorkcity", type=str)
+    parser.add_argument("-o", "--out_name", default="test", type=str)
+    parser.add_argument("-p", "--poi_data", default="foursquare", type=str)
+    parser.add_argument("-k", "--kfold", default=4, type=int)
+    args = parser.parse_args()
 
-    out_dir = os.path.join("outputs", OUT_NAME)
+    city = args.city
+
+    out_dir = os.path.join("outputs", args.out_name)
     os.makedirs(out_dir, exist_ok=True)
 
     # load data
     data_raw = read_gdf_csv(os.path.join("data", f"foursquare_{city}_features.csv"))
-    pois = read_poi_geojson(os.path.join("data", f"pois_{city}_foursquare.geojson"))
+    pois = read_poi_geojson(os.path.join("data", f"pois_{city}_{args.poi_data}.geojson"))
 
     # 1) USER-FEATURES: check the performance with solely the user features
-    results_only_user = cross_validation(data_raw)
+    results_only_user = cross_validation(data_raw, args.kfold)
     print_results(results_only_user, "user_only")
 
     # obfuscate coordinates
@@ -111,7 +117,7 @@ if __name__ == "__main__":
         # plot_confusion_matrix(
         #     test_y, y_pred, col_names=uni_labels, out_path=os.path.join("figures", "xgb_poi_confusion.png"),
         # )
-        result_df = cross_validation(dataset)
+        result_df = cross_validation(dataset, args.kfold)
         print_results(result_df, f"all_features_{masking}")
 
     with open(os.path.join(out_dir, "results.json"), "w") as outfile:

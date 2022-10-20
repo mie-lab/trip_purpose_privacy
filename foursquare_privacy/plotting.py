@@ -32,6 +32,8 @@ def plot_confusion_matrix(labels, pred, col_names=None, normalize="sensitivity",
 
     def data_to_label(data, text):
         out_shape = data.shape
+        if np.all(text == 0):
+            return (np.asarray(["{0:.2f}".format(data) for data in data.flatten()])).reshape(*out_shape)
         return (
             np.asarray(
                 [
@@ -47,7 +49,7 @@ def plot_confusion_matrix(labels, pred, col_names=None, normalize="sensitivity",
     labels = data_to_label(data_confusion, sens_stds)
 
     # ACTUAL PLOT
-    plt.figure(figsize=(20, 20))
+    plt.figure(figsize=(20, 10))
     df_cm = pd.DataFrame(data_confusion, index=[i for i in col_names], columns=[i for i in col_names])
 
     sn.set(font_scale=1.8)
@@ -65,9 +67,11 @@ def plot_confusion_matrix(labels, pred, col_names=None, normalize="sensitivity",
         bottom=False,  # ticks along the bottom edge are off
         top=False,  # ticks along the top edge are off
         labelbottom=True,
+        rotation=0,
     )
     plt.xlabel("$\\bf{Predictions}$", fontsize=20)
     plt.ylabel("$\\bf{Ground\ truth}$", fontsize=20)
+    plt.tight_layout()
     if out_path is None:
         plt.show()
     else:

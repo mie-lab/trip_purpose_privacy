@@ -44,5 +44,5 @@ if __name__ == "__main__":
         # save only main columns
         pois_simple = pois_simple[["geometry", "poi_type", "poi_my_label"]]
 
-        pois_simple.to_file(os.path.join(out_path, f"pois_{city}_labelled.geojson"), driver="GeoJSON")
+        pois_simple.to_file(os.path.join(out_path, f"pois_{city}_osm.geojson"), driver="GeoJSON")
 
