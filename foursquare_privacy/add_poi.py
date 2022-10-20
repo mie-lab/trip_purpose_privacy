@@ -6,18 +6,21 @@ import gensim
 from gensim.corpora import Dictionary
 from gensim.models import TfidfModel, LdaModel
 
-from foursquare_privacy.utils.io import read_gdf_csv, read_poi_geojson
-
 
 class POI_processor:
-    def __init__(self, data, poi_path=os.path.join("data", "pois_newyorkcity_labelled.geojson")):
-        self.data = data
+    def __init__(self, data, poi):
+        self.data = data.copy()
 
-        self.poi = read_poi_geojson(poi_path)
+        self.poi = poi.copy()
 
         assert self.poi.crs == self.data.crs, f"must be in the same CRS, poi: {self.poi.crs}, data: {self.data.crs}"
 
     def __call__(self, buffer=200):
+        """
+        Create oject with all geometries in the buffer
+        geom_with_pois: Each row is one data-poi combination, where the poi is within the buffer of the data sample
+            There is already a column "distance" incating the distance from the POINTs (not the buffer)
+        """
         self.buffer = buffer
 
         # we only need to add POIs by unique longitude or latitude --> group
@@ -62,8 +65,8 @@ class POI_processor:
         geom_with_poi_feats = pd.concat((self.geom_with_pois, poi_columns_one_hot), axis=1)
 
         for poi_col in poi_type_list:
-            # replace POI indicator by distance
-            geom_with_poi_feats[poi_col] = geom_with_poi_feats[poi_col] * geom_with_poi_feats["distance"]
+            # replace POI indicator by distance --> need to add 0.1 such that the distance=0 ones stay
+            geom_with_poi_feats[poi_col] = geom_with_poi_feats[poi_col] * (geom_with_poi_feats["distance"] + 0.1)
             # the ones where no POI is nearby are filled with the buffer distance
             geom_with_poi_feats.loc[geom_with_poi_feats[poi_col] == 0, poi_col] = self.buffer
 
