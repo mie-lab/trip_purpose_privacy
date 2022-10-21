@@ -15,7 +15,12 @@ from foursquare_privacy.plotting import confusion_matrix, plot_confusion_matrix
 from foursquare_privacy.location_masking import LocationMasker
 
 
-def cross_validation(dataset, kfold):
+def cross_validation(dataset, folds, models=[]):
+    if len(models) == 0:
+        print("Training models...")
+    else:
+        print("Apply trained models on obfuscated data")
+    assert len(models) == 0 or len(models) == len(folds), "either pass no model or pass all train models"
     # get features and labels
     features = dataset[[col for col in dataset.columns if col.startswith("feat")]]
     # print("List of features", features.columns)
@@ -23,9 +28,6 @@ def cross_validation(dataset, kfold):
     # map labels to numbers
     label_mapping = {u: i for i, u in enumerate(uni_labels)}
     labels = dataset["label"].map(label_mapping)
-
-    folds = spatial_split(dataset, kfold)
-    # print("Fold lengths", [len(f) for f in folds])
 
     result_df = dataset[["user_id", "venue_id", "label"]].copy()
     result_df["ground_truth"] = labels.astype(int)
@@ -37,15 +39,21 @@ def cross_validation(dataset, kfold):
         train_x = features.drop(fold_samples)
         train_y = labels.drop(fold_samples)
 
-        # fit and predict
-        model = xgboost.XGBClassifier()  # smaller max depth did not help
-        model.fit(train_x, train_y)
+        # Option 1: train mode --> models are not given
+        if len(models) < len(folds):
+            # fit and predict
+            model = xgboost.XGBClassifier()  # smaller max depth did not help
+            model.fit(train_x, train_y)
+            models.append(model)
+        # Option 2: test mode --> models given, just apply
+        else:
+            model = models[fold_num]
         y_pred = model.predict(test_x)
         # y_pred = np.random.choice(np.arange(12), len(test_x))  # testing
 
         result_df.loc[fold_samples, "prediction"] = y_pred
         # print(f"Accuracy fold {fold_num+1}:", sum(y_pred == test_y) / len(test_y))
-    return result_df
+    return models, result_df
 
 
 def print_results(result_df, name):
@@ -76,8 +84,13 @@ if __name__ == "__main__":
     data_raw = read_gdf_csv(os.path.join("data", f"foursquare_{city}_features.csv"))
     pois = read_poi_geojson(os.path.join("data", f"pois_{city}_{args.poi_data}.geojson"))
 
+    # Split data
+    np.random.seed(42)
+    folds = spatial_split(data_raw, args.kfold)
+    # print("Fold lengths", [len(f) for f in folds])
+
     # 1) USER-FEATURES: check the performance with solely the user features
-    results_only_user = cross_validation(data_raw, args.kfold)
+    _, results_only_user = cross_validation(data_raw, folds)
     print_results(results_only_user, "user_only")
 
     # obfuscate coordinates
@@ -85,6 +98,7 @@ if __name__ == "__main__":
         print(f"-------- Masking {masking} ---------")
         if masking == 0:
             data = data_raw.copy()
+            models = []
         else:
             masker = LocationMasker(data_raw)
             data = masker(masking)
@@ -114,10 +128,12 @@ if __name__ == "__main__":
         # if any(pd.isna(dataset)):
         #     print("Attention: NaNs in data", sum(pd.isna(dataset)))
 
-        # plot_confusion_matrix(
-        #     test_y, y_pred, col_names=uni_labels, out_path=os.path.join("figures", "xgb_poi_confusion.png"),
-        # )
-        result_df = cross_validation(dataset, args.kfold)
+        _, result_df = cross_validation(dataset, folds, models=[])
+        # # CODE to train only on non-obfuscated and test on others
+        # if masking == 0:
+        #     models, result_df = cross_validation(dataset, folds, models)
+        # else:
+        #     _, result_df = cross_validation(dataset, folds, models)
         print_results(result_df, f"all_features_{masking}")
 
     with open(os.path.join(out_dir, "results.json"), "w") as outfile:
