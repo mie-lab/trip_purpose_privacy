@@ -8,6 +8,38 @@ import pandas as pd
 device = "cpu"
 
 
+class MLPWrapper:
+    def __init__(self, model_params):
+        self.model = None
+        self.config = {"batch_size": 8, "epochs": 3, "learning_rate": 1e-4}
+
+        self.config.update(model_params)
+
+    def fit(self, train_x, train_y):
+        train_x = np.array(train_x)
+        train_y = pd.get_dummies(train_y)
+        train_y = train_y[sorted(train_y.columns)]
+        train_y = np.array(train_y)
+        self.train_std = np.std(train_x, axis=0)
+        train_x = train_x / self.train_std
+
+        cut = int(len(train_x) * 0.9)
+        train_x_cut = train_x[:cut]
+        val_x = train_x[cut:]
+        train_y_cut = train_y[:cut]
+        val_y = train_y[cut:]
+
+        self.model = train_model(train_x_cut, train_y_cut, val_x, val_y, **self.config)
+
+    def predict(self, test_x):
+        test_x = torch.from_numpy(np.array(test_x) / self.train_std).float()
+        self.model.eval()
+        with torch.no_grad():
+            pred_probs = self.model(test_x).numpy()
+        # TODO: return probs
+        return np.argmax(pred_probs, axis=1)
+
+
 class PoiMLP(nn.Module):
     def __init__(self, inp_size, out_size, dropout_rate=0, act=nn.functional.softmax):
         super(PoiMLP, self).__init__()
@@ -21,7 +53,7 @@ class PoiMLP(nn.Module):
     def forward(self, x):
         hidden = self.dropout1(torch.relu(self.linear_1(x)))
         hidden = self.dropout2(torch.relu(self.linear_2(hidden)))
-        out = self.final_act(self.linear_3(hidden))
+        out = self.final_act(self.linear_3(hidden), dim=-1)
         return out
 
 
@@ -47,7 +79,8 @@ def train_model(
     batch_size=8,
     epochs=10,
     learning_rate=1e-3,
-    save_path=os.path.join("trained_models", "test"),
+    entropy_loss_factor=10,
+    save_path=None,  # os.path.join("trained_models", "test"),
     **kwargs,
 ):
     # create dataset and dataloader
@@ -58,7 +91,7 @@ def train_model(
 
     # model
     model = PoiMLP(inp_size=train_set_nn_x.shape[1], out_size=train_set_nn_y.shape[1])
-    os.makedirs(save_path, exist_ok=True)
+    # os.makedirs(save_path, exist_ok=True)
 
     # loss function
     criterion = nn.CrossEntropyLoss()
@@ -69,10 +102,10 @@ def train_model(
     # get ground truth test labels for accuracy evaluation
     gt_test_labels = np.argmax(val_set_nn_y, axis=1)
     uni, counts = np.unique(gt_test_labels, return_counts=True)
-    print("Test label distribution:", {u: c for u, c in zip(uni, counts)})
+    # print("Test label distribution:", {u: c for u, c in zip(uni, counts)})
 
     model.train()
-    best_performance = np.inf
+    best_performance = 0
     epoch_test_loss, epoch_train_loss = [], []
     for epoch in range(epochs):
         losses = []
@@ -84,9 +117,12 @@ def train_model(
 
             output = model(x)
             # loss
-            softmax_loss = criterion(output, y)
-            entropy_loss = torch.mean(torch.sum(output * torch.log(output), dim=-1)) + 3
-            loss = softmax_loss + entropy_loss * 10
+            if entropy_loss_factor == 0:
+                loss = criterion(output, y)
+            else:
+                softmax_loss = criterion(output, y)
+                entropy_loss = torch.mean(torch.sum(output * torch.log(output), dim=-1)) + 3
+                loss = softmax_loss + entropy_loss * entropy_loss_factor
             loss.backward()
             # if batch_num == 10:
             #     # print(model.linear_3.weight.grad)
@@ -117,15 +153,13 @@ def train_model(
             f"\n Epoch {epoch} | TRAIN Loss {round(sum(losses) / len(losses), 2)}\
                  | TEST loss {round(sum(test_losses) / len(test_losses), 2)} \n"
         )
-        print(
-            "Accuracy:",
-            round(np.sum(test_pred == gt_test_labels) / len(test_pred), 2),
-            {u: c for u, c in zip(uni, counts)},
-        )
-        if sum(test_losses) < best_performance:
-            best_performance = sum(test_losses)
-            torch.save(model.state_dict(), os.path.join(save_path, "model"))
-            print("Saved model")
+        test_accuracy = np.sum(test_pred == gt_test_labels) / len(test_pred)
+        print("Accuracy:", round(test_accuracy, 2), {u: c for u, c in zip(uni, counts)})
+        if test_accuracy > best_performance:
+            best_performance = test_accuracy
+            best_model = model.state_dict()
+            # torch.save(model.state_dict(), os.path.join(save_path, "model"))
+            # print("Saved model")
         print()
         # print(
         #     f"\n Epoch {epoch} (median) | TRAIN Loss {round(np.median(losses), 3)}\
@@ -133,7 +167,10 @@ def train_model(
         # )
         epoch_test_loss.append(np.mean(test_losses))
         epoch_train_loss.extend(list(average_batches(losses)))
-    plot_losses(epoch_train_loss, epoch_test_loss, save_path)
+    # plot_losses(epoch_train_loss, epoch_test_loss, save_path)
+
+    # Set model to best model
+    model.load_state_dict(best_model)
     return model
 
 

@@ -8,11 +8,16 @@ import numpy as np
 from sklearn.metrics import accuracy_score, balanced_accuracy_score
 
 from foursquare_privacy.utils.io import read_gdf_csv, read_poi_geojson
+from foursquare_privacy.models.xgb import XGBWrapper
+from foursquare_privacy.models.mlp import MLPWrapper
 from foursquare_privacy.utils.user_distribution import get_user_dist_mae
 from foursquare_privacy.utils.spatial_folds import spatial_split
 from foursquare_privacy.add_poi import POI_processor
 from foursquare_privacy.plotting import confusion_matrix, plot_confusion_matrix
 from foursquare_privacy.location_masking import LocationMasker
+
+model_dict = {"xgb": {"model_class": XGBWrapper, "config": {}}, "mlp": {"model_class": MLPWrapper, "config": {}}}
+# xgb config: tree_method="gpu_hist", gpu_id=0 if gpu available
 
 
 def cross_validation(dataset, folds, models=[]):
@@ -42,7 +47,7 @@ def cross_validation(dataset, folds, models=[]):
         # Option 1: train mode --> models are not given
         if len(models) < len(folds):
             # fit and predict
-            model = xgboost.XGBClassifier()  # smaller max depth did not help
+            model = ModelClass(model_config)  # smaller max depth did not help
             model.fit(train_x, train_y)
             models.append(model)
         # Option 2: test mode --> models given, just apply
@@ -73,6 +78,7 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--city", default="newyorkcity", type=str)
     parser.add_argument("-o", "--out_name", default="test", type=str)
     parser.add_argument("-p", "--poi_data", default="foursquare", type=str)
+    parser.add_argument("-m", "--model", default="xgb", type=str)
     parser.add_argument("-k", "--kfold", default=4, type=int)
     args = parser.parse_args()
 
@@ -80,6 +86,10 @@ if __name__ == "__main__":
 
     out_dir = os.path.join("outputs", args.out_name)
     os.makedirs(out_dir, exist_ok=True)
+
+    # get model
+    ModelClass = model_dict[args.model]["model_class"]
+    model_config = model_dict[args.model]["config"]
 
     # load data
     data_raw = read_gdf_csv(os.path.join(args.data_path, f"foursquare_{city}_features.csv"))

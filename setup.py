@@ -20,7 +20,7 @@ setup(
     author_email=("nwiedemann@ethz.ch"),
     license="MIT",
     url="https://github.com/mie-lab/trip_purpose_privacy",
-    install_requires=["numpy", "pyrosm"],
+    install_requires=["numpy", "xgboost"],
     classifiers=[
         "License :: OSI Approved :: MIT License",
         "Intended Audience :: Science/Research",
