@@ -11,7 +11,7 @@ class XGBWrapper:
         self.model.fit(train_x, train_y)
 
     def predict(self, test_x):
-        return self.model.predict(test_x)
+        return self.model.predict_proba(test_x)
 
     def save(self, save_path):
         with open(os.path.join("trained_models", save_path, "xgb_model.p"), "wb") as outfile:

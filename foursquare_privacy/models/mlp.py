@@ -37,8 +37,8 @@ class MLPWrapper:
         self.model.eval()
         with torch.no_grad():
             pred_probs = self.model(test_x).numpy()
-        # TODO: return probs
-        return np.argmax(pred_probs, axis=1)
+        return pred_probs
+        # return np.argmax(pred_probs, axis=1)
 
 
 class PoiMLP(nn.Module):

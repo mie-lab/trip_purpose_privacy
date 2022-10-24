@@ -36,6 +36,7 @@ def cross_validation(dataset, folds, models=[]):
 
     result_df = dataset[["user_id", "venue_id", "label"]].copy()
     result_df["ground_truth"] = labels.astype(int)
+    proba_columns = [f"proba_{u}" for u in uni_labels]
     result_df["prediction"] = -1
 
     for fold_num, fold_samples in enumerate(folds):
@@ -53,9 +54,11 @@ def cross_validation(dataset, folds, models=[]):
         # Option 2: test mode --> models given, just apply
         else:
             model = models[fold_num]
-        y_pred = model.predict(test_x)
+        y_pred_proba = model.predict(test_x)
+        y_pred = np.argmax(y_pred_proba, axis=1)
         # y_pred = np.random.choice(np.arange(12), len(test_x))  # testing
 
+        result_df.loc[fold_samples, proba_columns] = y_pred_proba
         result_df.loc[fold_samples, "prediction"] = y_pred
         # print(f"Accuracy fold {fold_num+1}:", sum(y_pred == test_y) / len(test_y))
     return models, result_df
@@ -76,7 +79,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--data_path", default="data", type=str)
     parser.add_argument("-c", "--city", default="newyorkcity", type=str)
-    parser.add_argument("-o", "--out_name", default="test", type=str)
+    parser.add_argument("-o", "--out_name", default="1", type=str)
     parser.add_argument("-p", "--poi_data", default="foursquare", type=str)
     parser.add_argument("-m", "--model", default="xgb", type=str)
     parser.add_argument("-k", "--kfold", default=4, type=int)
@@ -84,6 +87,7 @@ if __name__ == "__main__":
 
     city = args.city
 
+    out_name_full = f"{args.model}_{args.poi_data}_{args.city}_{args.out_name}"
     out_dir = os.path.join("outputs", args.out_name)
     os.makedirs(out_dir, exist_ok=True)
 
