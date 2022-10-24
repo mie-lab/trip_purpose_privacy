@@ -11,14 +11,15 @@ device = "cpu"
 class MLPWrapper:
     def __init__(self, model_params):
         self.model = None
-        self.config = {"batch_size": 8, "epochs": 3, "learning_rate": 1e-4}
+        self.config = {"batch_size": 8, "epochs": 30, "learning_rate": 1e-4}
 
         self.config.update(model_params)
 
     def fit(self, train_x, train_y):
         train_x = np.array(train_x)
-        train_y = pd.get_dummies(train_y)
-        train_y = train_y[sorted(train_y.columns)]
+        # # for one-hot y labels
+        # train_y = pd.get_dummies(train_y)
+        # train_y = train_y[sorted(train_y.columns)]
         train_y = np.array(train_y)
         self.train_std = np.std(train_x, axis=0)
         train_x = train_x / self.train_std
@@ -90,7 +91,7 @@ def train_model(
     test_loader = DataLoader(val_set_nn_torch, batch_size=batch_size, shuffle=False)
 
     # model
-    model = PoiMLP(inp_size=train_set_nn_x.shape[1], out_size=train_set_nn_y.shape[1])
+    model = PoiMLP(inp_size=train_set_nn_x.shape[1], out_size=len(np.unique(train_set_nn_y)))
     # os.makedirs(save_path, exist_ok=True)
 
     # loss function
@@ -100,9 +101,9 @@ def train_model(
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     # get ground truth test labels for accuracy evaluation
-    gt_test_labels = np.argmax(val_set_nn_y, axis=1)
+    gt_test_labels = val_set_nn_y.astype(int)  # np.argmax(val_set_nn_y, axis=1)
     uni, counts = np.unique(gt_test_labels, return_counts=True)
-    # print("Test label distribution:", {u: c for u, c in zip(uni, counts)})
+    print("Test label distribution:", {u: c for u, c in zip(uni, counts)})
 
     model.train()
     best_performance = 0
@@ -113,7 +114,7 @@ def train_model(
             optimizer.zero_grad()
             x, y = input_data
             x = x.to(device).float()
-            y = y.to(device).float()
+            y = y.to(device).long()
 
             output = model(x)
             # loss
@@ -141,7 +142,7 @@ def train_model(
             for batch_num, input_data in enumerate(test_loader):
                 x, y = input_data
                 x = x.to(device).float()
-                y = y.to(device).float()
+                y = y.to(device).long()
                 output = model(x)
                 loss = criterion(output, y)
                 test_losses.append(loss.item())
