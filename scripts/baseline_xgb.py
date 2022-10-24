@@ -69,6 +69,7 @@ results_dict = {}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("-d", "--data_path", default="data", type=str)
     parser.add_argument("-c", "--city", default="newyorkcity", type=str)
     parser.add_argument("-o", "--out_name", default="test", type=str)
     parser.add_argument("-p", "--poi_data", default="foursquare", type=str)
@@ -81,8 +82,8 @@ if __name__ == "__main__":
     os.makedirs(out_dir, exist_ok=True)
 
     # load data
-    data_raw = read_gdf_csv(os.path.join("data", f"foursquare_{city}_features.csv"))
-    pois = read_poi_geojson(os.path.join("data", f"pois_{city}_{args.poi_data}.geojson"))
+    data_raw = read_gdf_csv(os.path.join(args.data_path, f"foursquare_{city}_features.csv"))
+    pois = read_poi_geojson(os.path.join(args.data_path, f"pois_{city}_{args.poi_data}.geojson"))
 
     # Split data
     np.random.seed(42)
