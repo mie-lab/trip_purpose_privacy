@@ -78,12 +78,11 @@ def plot_confusion_matrix(labels, pred, col_names=None, normalize="sensitivity",
         plt.savefig(out_path)
 
 
-
 def main_plot(result_df, out_path):
     result_df.sort_values(["obfuscation", "method"], inplace=True)
     data_feats = result_df[result_df["method"] == "all features"]
     data_nearest = result_df[result_df["method"] == "spatial join"]
-    user_acc = result_df.set_index("method").loc["user"]["Accuracy"]
+    user_acc = result_df.set_index("method").loc["temporal"]["Accuracy"]
 
     plt.figure(figsize=(10, 6))
     plt.plot(data_feats["obfuscation"], data_feats["Accuracy"], label="All features")
@@ -91,7 +90,7 @@ def main_plot(result_df, out_path):
     plt.plot(
         data_nearest["obfuscation"],
         [user_acc for _ in range(len(data_nearest))],
-        label="Only user features",
+        label="Only temporal features",
         linestyle="--",
     )
     plt.plot(
@@ -107,9 +106,9 @@ def main_plot(result_df, out_path):
 def user_mae_plot(result_df, out_path):
     user_results = result_df.dropna(subset=["User-wise MAE probs"])
     user_results = user_results.sort_values(["obfuscation", "method"])
-    timefeats_mae = user_results.set_index("method").loc["user"]["User-wise MAE"]
-    timefeats_mae_probs = user_results.set_index("method").loc["user"]["User-wise MAE probs"]
-    user_results = user_results[user_results["method"] != "user"]
+    timefeats_mae = user_results.set_index("method").loc["temporal"]["User-wise MAE"]
+    timefeats_mae_probs = user_results.set_index("method").loc["temporal"]["User-wise MAE probs"]
+    user_results = user_results[user_results["method"] != "temporal"]
 
     plt.figure(figsize=(10, 6))
     plt.plot(user_results["obfuscation"], user_results["User-wise MAE"], label="Hard labels", c="blue")
@@ -117,14 +116,14 @@ def user_mae_plot(result_df, out_path):
     plt.plot(
         user_results["obfuscation"],
         [timefeats_mae for _ in range(len(user_results))],
-        label="Hard labels (visit features)",
+        label="Hard labels (temporal features)",
         linestyle="--",
         c="blue",
     )
     plt.plot(
         user_results["obfuscation"],
         [timefeats_mae_probs for _ in range(len(user_results))],
-        label="Soft labels (visit features)",
+        label="Soft labels (temporal features)",
         linestyle="--",
         c="red",
     )
@@ -133,7 +132,6 @@ def user_mae_plot(result_df, out_path):
     # plt.xticks(np.arange(len(data_nearest)), data_nearest["obfuscation"])
     plt.legend()
     plt.savefig(os.path.join(out_path, "user_mae_probs_by_obfuscation.png"))
-
 
 
 if __name__ == "__main__":

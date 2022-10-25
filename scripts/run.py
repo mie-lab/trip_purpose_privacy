@@ -109,7 +109,7 @@ if __name__ == "__main__":
 
     # 1) USER-FEATURES: check the performance with solely the user features
     _, results_only_user = cross_validation(data_raw, folds)
-    print_results(results_only_user, "user_only")
+    print_results(results_only_user, "temporal_features")
 
     # obfuscate coordinates
     for masking in [0, 25, 50, 100, 200]:
