@@ -5,7 +5,7 @@ import xgboost
 
 class XGBWrapper:
     def __init__(self, xgb_params):
-        self.model = xgboost.XGBClassifier(xgb_params)
+        self.model = xgboost.XGBClassifier(**xgb_params)
 
     def fit(self, train_x, train_y):
         self.model.fit(train_x, train_y)

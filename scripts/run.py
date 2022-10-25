@@ -1,8 +1,6 @@
 import json
-from multiprocessing.sharedctypes import Value
 import os
 import pandas as pd
-import xgboost
 import argparse
 import numpy as np
 from sklearn.metrics import accuracy_score, balanced_accuracy_score
@@ -11,9 +9,8 @@ from foursquare_privacy.utils.io import read_gdf_csv, read_poi_geojson
 from foursquare_privacy.models.xgb import XGBWrapper
 from foursquare_privacy.models.mlp import MLPWrapper
 from foursquare_privacy.utils.user_distribution import get_user_dist_mae
-from foursquare_privacy.utils.spatial_folds import spatial_split
+from foursquare_privacy.utils.spatial_folds import spatial_split, venue_split
 from foursquare_privacy.add_poi import POI_processor
-from foursquare_privacy.plotting import confusion_matrix, plot_confusion_matrix
 from foursquare_privacy.location_masking import LocationMasker
 
 model_dict = {"xgb": {"model_class": XGBWrapper, "config": {}}, "mlp": {"model_class": MLPWrapper, "config": {}}}
@@ -82,12 +79,13 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--out_name", default="1", type=str)
     parser.add_argument("-p", "--poi_data", default="foursquare", type=str)
     parser.add_argument("-m", "--model", default="xgb", type=str)
+    parser.add_argument("-f", "--fold_mode", default="spatial", type=str)
     parser.add_argument("-k", "--kfold", default=4, type=int)
     args = parser.parse_args()
 
     city = args.city
 
-    out_name_full = f"{args.model}_{args.poi_data}_{args.city}_{args.out_name}"
+    out_name_full = f"{args.model}_{args.poi_data}_{args.city}_{args.fold_mode}_{args.out_name}"
     out_dir = os.path.join("outputs", out_name_full)
     os.makedirs(out_dir, exist_ok=True)
 
@@ -101,7 +99,12 @@ if __name__ == "__main__":
 
     # Split data
     np.random.seed(42)
-    folds = spatial_split(data_raw, args.kfold)
+    if args.fold_mode == "spatial":
+        folds = spatial_split(data_raw, args.kfold)
+    elif args.fold_mode == "venue":
+        folds = venue_split(data_raw, args.kfold)
+    else:
+        raise ValueError("fold_mode argument must be one of spatial, venue")
     # print("Fold lengths", [len(f) for f in folds])
 
     # 1) USER-FEATURES: check the performance with solely the user features

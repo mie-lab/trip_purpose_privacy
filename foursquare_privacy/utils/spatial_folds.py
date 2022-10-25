@@ -21,3 +21,16 @@ def spatial_split(data, kfold=9):
             # print(i, j, len(indices_spatial))
             folds.append(indices_spatial)
     return folds
+
+
+def venue_split(data, kfold=5):
+    assert data["venue_id"].nunique() == len(data), "Index must correspond to venue_id"
+    rands = np.random.permutation(data.index)
+    folds = []
+    fold_len = len(rands) // kfold
+    for k in range(kfold):
+        folds.append(rands[k * fold_len : (k + 1) * fold_len].tolist())
+    # add the leftover samples to the last fold
+    folds[-1].extend(rands[(k + 1) * fold_len :])
+    return folds
+

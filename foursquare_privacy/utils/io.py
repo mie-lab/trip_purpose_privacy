@@ -46,4 +46,6 @@ def read_poi_geojson(path):
     elif "tokyo" in path or "tky" in path:
         print("Projecting POIs into TKY CRS")
         gdf.to_crs("EPSG:30169", inplace=True)
+    # remove other label
+    gdf = gdf[gdf["poi_my_label"] != "other"]
     return gdf
