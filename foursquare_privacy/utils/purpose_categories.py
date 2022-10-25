@@ -47,7 +47,7 @@ def get_purpose_category(p):
         "golf" in low
         or "tennis" in low
         or "dance" in low
-        or "sport" in low
+        or (("sport" in low) and ("shop" not in low))
         or "gym" in low
         or "hiking" in low
         or "skating" in low

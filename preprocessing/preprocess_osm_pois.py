@@ -19,7 +19,9 @@ for city in ["newyorkcity", "tokyo"]:
         "shop": True,
         "leisure": True,
         "amenity": True,
+        "tourism": ["museum"],
         "building": ["religious", "transportation"],
+        "public_transport": ["station"],
     }
     pois = osm.get_data_by_custom_criteria(custom_filter=custom_filter, keep_ways=False, keep_relations=False)
     print("Raw POIs length", len(pois))
@@ -64,8 +66,13 @@ for city in ["newyorkcity", "tokyo"]:
     pois_simple.loc[
         pd.isna(pois_simple["poi_type"]) & (pois_simple["tags"].str.contains("healthcare").fillna(False)), "poi_type"
     ] = "healthcare"
-    pois_simple["poi_type"] = pois_simple["poi_type"].fillna(pois_simple["shop"])
+    # add museums
+    pois_simple.loc[
+        pd.isna(pois_simple["poi_type"]) & (pois_simple["name"].str.contains("museum").fillna(False)), "poi_type"
+    ] = "museum"
     pois_simple["poi_type"] = pois_simple["poi_type"].fillna(pois_simple["religion"])
+    pois_simple["poi_type"] = pois_simple["poi_type"].fillna(pois_simple["public_transport"])
+    pois_simple["poi_type"] = pois_simple["poi_type"].fillna(pois_simple["shop"])
 
     # reduce to relevant columns and dropn nans
     prev_len = len(pois_simple)
