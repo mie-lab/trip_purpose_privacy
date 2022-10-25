@@ -8,6 +8,9 @@ Preprocessing steps:
 # Preprocess the raw (txt) data into a GeoDataFrame with longitude and latitude
 python preprocessing/preprocess_ny_tokyo.py
 
+# Preprocess Foursquare POIs
+python preprocessing/preprocess_foursquare_pois.py
+
 # Group by user and venue ID and aggregate user features (visit times, count and duration)
 python preprocessing/get_user_venue_dataset.py
 ```
