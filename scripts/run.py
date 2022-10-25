@@ -88,7 +88,7 @@ if __name__ == "__main__":
     city = args.city
 
     out_name_full = f"{args.model}_{args.poi_data}_{args.city}_{args.out_name}"
-    out_dir = os.path.join("outputs", args.out_name)
+    out_dir = os.path.join("outputs", out_name_full)
     os.makedirs(out_dir, exist_ok=True)
 
     # get model

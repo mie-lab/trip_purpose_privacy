@@ -78,6 +78,64 @@ def plot_confusion_matrix(labels, pred, col_names=None, normalize="sensitivity",
         plt.savefig(out_path)
 
 
+
+def main_plot(result_df, out_path):
+    result_df.sort_values(["obfuscation", "method"], inplace=True)
+    data_feats = result_df[result_df["method"] == "all features"]
+    data_nearest = result_df[result_df["method"] == "spatial join"]
+    user_acc = result_df.set_index("method").loc["user"]["Accuracy"]
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(data_feats["obfuscation"], data_feats["Accuracy"], label="All features")
+    plt.plot(data_nearest["obfuscation"], data_nearest["Accuracy"], label="Spatial join")
+    plt.plot(
+        data_nearest["obfuscation"],
+        [user_acc for _ in range(len(data_nearest))],
+        label="Only user features",
+        linestyle="--",
+    )
+    plt.plot(
+        data_nearest["obfuscation"], [0.08 for _ in range(len(data_nearest))], label="Random", linestyle="--", c="grey"
+    )
+    plt.xlabel("Obfuscation (in meters)")
+    plt.ylabel("Accuracy")
+    # plt.xticks(np.arange(len(data_nearest)), data_nearest["obfuscation"])
+    plt.legend()
+    plt.savefig(os.path.join(out_path, "main_result_plot.png"))
+
+
+def user_mae_plot(result_df, out_path):
+    user_results = result_df.dropna(subset=["User-wise MAE probs"])
+    user_results = user_results.sort_values(["obfuscation", "method"])
+    timefeats_mae = user_results.set_index("method").loc["user"]["User-wise MAE"]
+    timefeats_mae_probs = user_results.set_index("method").loc["user"]["User-wise MAE probs"]
+    user_results = user_results[user_results["method"] != "user"]
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(user_results["obfuscation"], user_results["User-wise MAE"], label="Hard labels", c="blue")
+    plt.plot(user_results["obfuscation"], user_results["User-wise MAE probs"], label="Soft labels", c="red")
+    plt.plot(
+        user_results["obfuscation"],
+        [timefeats_mae for _ in range(len(user_results))],
+        label="Hard labels (visit features)",
+        linestyle="--",
+        c="blue",
+    )
+    plt.plot(
+        user_results["obfuscation"],
+        [timefeats_mae_probs for _ in range(len(user_results))],
+        label="Soft labels (visit features)",
+        linestyle="--",
+        c="red",
+    )
+    plt.xlabel("Obfuscation (in meters)")
+    plt.ylabel("User-wise distribution MAE")
+    # plt.xticks(np.arange(len(data_nearest)), data_nearest["obfuscation"])
+    plt.legend()
+    plt.savefig(os.path.join(out_path, "user_mae_probs_by_obfuscation.png"))
+
+
+
 if __name__ == "__main__":
     # Testing
     data_confusion = np.random.rand(2, 5, 5)
