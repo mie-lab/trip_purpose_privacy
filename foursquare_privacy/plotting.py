@@ -83,6 +83,7 @@ def main_plot(result_df, out_path):
     data_feats = result_df[result_df["method"] == "all features"]
     data_nearest = result_df[result_df["method"] == "spatial join"]
     user_acc = result_df.set_index("method").loc["temporal"]["Accuracy"]
+    rand_acc = result_df.set_index("method").loc["random"]["Accuracy"]
 
     plt.figure(figsize=(10, 6))
     plt.plot(data_feats["obfuscation"], data_feats["Accuracy"], label="All features")
@@ -94,7 +95,11 @@ def main_plot(result_df, out_path):
         linestyle="--",
     )
     plt.plot(
-        data_nearest["obfuscation"], [0.08 for _ in range(len(data_nearest))], label="Random", linestyle="--", c="grey"
+        data_nearest["obfuscation"],
+        [rand_acc for _ in range(len(data_nearest))],
+        label="Random",
+        linestyle="--",
+        c="grey",
     )
     plt.xlabel("Obfuscation (in meters)")
     plt.ylabel("Accuracy")
@@ -108,24 +113,44 @@ def user_mae_plot(result_df, out_path):
     user_results = user_results.sort_values(["obfuscation", "method"])
     timefeats_mae = user_results.set_index("method").loc["temporal"]["User-wise MAE"]
     timefeats_mae_probs = user_results.set_index("method").loc["temporal"]["User-wise MAE probs"]
-    user_results = user_results[user_results["method"] != "temporal"]
+    random_mae = user_results.set_index("method").loc["random"]["User-wise MAE"]
+    random_mae_probs = user_results.set_index("method").loc["random"]["User-wise MAE probs"]
+    user_results = user_results.dropna(subset=["obfuscation"])
 
     plt.figure(figsize=(10, 6))
-    plt.plot(user_results["obfuscation"], user_results["User-wise MAE"], label="Hard labels", c="blue")
-    plt.plot(user_results["obfuscation"], user_results["User-wise MAE probs"], label="Soft labels", c="red")
+    plt.plot(user_results["obfuscation"], user_results["User-wise MAE"], label="Hard labels (all features)", c="blue")
+    plt.plot(
+        user_results["obfuscation"],
+        user_results["User-wise MAE probs"],
+        label="Soft labels (all features)",
+        linestyle="--",
+        c="blue",
+    )
     plt.plot(
         user_results["obfuscation"],
         [timefeats_mae for _ in range(len(user_results))],
         label="Hard labels (temporal features)",
-        linestyle="--",
-        c="blue",
+        c="green",
     )
     plt.plot(
         user_results["obfuscation"],
         [timefeats_mae_probs for _ in range(len(user_results))],
         label="Soft labels (temporal features)",
         linestyle="--",
-        c="red",
+        c="green",
+    )
+    plt.plot(
+        user_results["obfuscation"],
+        [random_mae for _ in range(len(user_results))],
+        label="Hard labels (random)",
+        c="grey",
+    )
+    plt.plot(
+        user_results["obfuscation"],
+        [random_mae_probs for _ in range(len(user_results))],
+        label="Soft labels (random)",
+        linestyle="--",
+        c="grey",
     )
     plt.xlabel("Obfuscation (in meters)")
     plt.ylabel("User-wise distribution MAE")

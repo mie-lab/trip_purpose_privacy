@@ -15,16 +15,21 @@ def results_to_dataframe(result_dict):
     result_df = pd.DataFrame(result_dict).swapaxes(1, 0)
     result_df.index.name = "method"
     result_df.reset_index(inplace=True)
-    result_df["obfuscation"] = result_df["method"].apply(lambda x: int(x.split("_")[-1]) if x != "user_only" else pd.NA)
+    result_df["obfuscation"] = result_df["method"].apply(
+        lambda x: int(x.split("_")[-1]) if x not in ["temporal_feats", "random_results"] else pd.NA
+    )
     result_df["method"] = result_df["method"].apply(lambda x: " ".join(x.split("_")[:-1]))
     return result_df.sort_values(["obfuscation", "method"])
 
 
 def load_results(base_path):
+    files_for_eval = [f for f in os.listdir(base_path) if f.startswith("predictions")]
+    # make random file at first
+    any_results_file = pd.read_csv(os.path.join(base_path, files_for_eval[0]))
+    rand_results = baseline_random(any_results_file)
+    rand_results.to_csv(os.path.join(base_path, "predictions_random_results.csv"))
     result_dict = {}
-    for pred in os.listdir(base_path):
-        if not pred.startswith("predictions"):
-            continue
+    for pred in files_for_eval:
         result_df = pd.read_csv(os.path.join(base_path, pred))
         name = pred[12:-4]
         acc = accuracy_score(result_df["ground_truth"], result_df["prediction"])
@@ -43,8 +48,18 @@ def load_results(base_path):
     return result_dict
 
 
+def baseline_random(results):
+    """Make random results based on distribution of ground truth labels"""
+    # add random as baseline
+    uni, count = np.unique(results["label"], return_counts=True)
+    count = count / np.sum(count)
+    results.loc[:, ["proba_" + u for u in uni]] = count
+    results["prediction"] = np.random.choice(np.unique(results["ground_truth"]), p=count, size=len(results))
+    return results
+
+
 if __name__ == "__main__":
-    base_path = "outputs/xgb_foursquare_newyorkcity_1"
+    base_path = "outputs/xgb_foursquare_newyorkcity_spatial_1"
     out_path = base_path
     # combine results
     result_dict = load_results(base_path)
