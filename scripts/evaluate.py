@@ -58,8 +58,7 @@ def baseline_random(results):
     return results
 
 
-if __name__ == "__main__":
-    base_path = "outputs/xgb_foursquare_newyorkcity_spatial_1"
+def plot_results_for_one(base_path = "outputs/xgb_foursquare_newyorkcity_spatial_1"):
     out_path = base_path
     # combine results
     result_dict = load_results(base_path)
@@ -80,4 +79,21 @@ if __name__ == "__main__":
         col_names=np.unique(results_one["label"]),
         out_path=os.path.join(out_path, "confusion_matrix.png"),
     )
+
+
+if __name__ == "__main__":
+    base_path = "outputs/test_runs"
+    results = []
+    info_columns = ["model", "poi_data", "city", "split"]
+    for subdir in os.listdir(base_path):
+        if subdir[0] == ".":
+            continue
+        infos = subdir.split("_")[:-1]
+        result_dict = load_results(os.path.join(base_path, subdir))
+        result_df = results_to_dataframe(result_dict)
+        for i, col in enumerate(info_columns):
+            result_df[col] = infos[i]
+        results.append(result_df)
+    all_results = pd.concat(results)
+    all_results.to_csv("pooled_results.csv")
 
