@@ -2,6 +2,7 @@ import numpy as np
 import pickle
 import os
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 plt.rcParams.update({"font.size": 20})
 import pandas as pd
@@ -16,7 +17,7 @@ def results_to_dataframe(result_dict):
     result_df.index.name = "method"
     result_df.reset_index(inplace=True)
     result_df["obfuscation"] = result_df["method"].apply(
-        lambda x: int(x.split("_")[-1]) if x not in ["temporal_feats", "random_results"] else pd.NA
+        lambda x: int(x.split("_")[-1]) if x not in ["temporal_features", "random_results"] else pd.NA
     )
     result_df["method"] = result_df["method"].apply(lambda x: " ".join(x.split("_")[:-1]))
     return result_df.sort_values(["obfuscation", "method"])
@@ -28,6 +29,8 @@ def load_results(base_path):
     any_results_file = pd.read_csv(os.path.join(base_path, files_for_eval[0]))
     rand_results = baseline_random(any_results_file)
     rand_results.to_csv(os.path.join(base_path, "predictions_random_results.csv"))
+
+    files_for_eval = [f for f in os.listdir(base_path) if f.startswith("predictions")]
     result_dict = {}
     for pred in files_for_eval:
         result_df = pd.read_csv(os.path.join(base_path, pred))
@@ -58,7 +61,8 @@ def baseline_random(results):
     return results
 
 
-def plot_results_for_one(base_path = "outputs/xgb_foursquare_newyorkcity_spatial_1"):
+def plot_results_for_one(base_path="outputs/xgb_foursquare_newyorkcity_spatial_1"):
+    # INPUT: single configuration, all csv files for this configuration
     out_path = base_path
     # combine results
     result_dict = load_results(base_path)
@@ -81,8 +85,23 @@ def plot_results_for_one(base_path = "outputs/xgb_foursquare_newyorkcity_spatial
     )
 
 
-if __name__ == "__main__":
-    base_path = "outputs/test_runs"
+def poi_density_analysis(result_csv_path, data_path="data", out_path="figures"):
+    # Input: SINGLE CSV
+    results = pd.read_csv(result_csv_path)
+    city = "newyorkcity" if "newyorkcity" in result_csv_path else "tokyo"
+    poi_density = pd.read_csv(os.path.join(data_path, f"poi_density_{city}.csv"))
+
+    results = results.merge(poi_density, left_on="venue_id", right_on="venue_id", how="left")
+    results["Sample"] = (
+        (results["prediction"] == results["ground_truth"]).astype(int).map({0: "erronous", 1: "correct"})
+    )
+    sns.kdeplot(data=results, x="poi_density", hue="Sample", common_norm=False)
+    plt.xlabel("POI density (in 500m surrounding)")
+    plt.tight_layout()
+    plt.savefig(os.path.join(out_path, "kde_poi_density.png"))
+
+
+def load_save_all_results(base_path="outputs/cluster_runs_all"):
     results = []
     info_columns = ["model", "poi_data", "city", "split"]
     for subdir in os.listdir(base_path):
@@ -95,5 +114,13 @@ if __name__ == "__main__":
             result_df[col] = infos[i]
         results.append(result_df)
     all_results = pd.concat(results)
-    all_results.to_csv("pooled_results.csv")
+    all_results.to_csv("outputs/pooled_results.csv")
+
+
+if __name__ == "__main__":
+    # load_save_all_results()
+    # plot_results_for_one(base_path="outputs/cluster_runs_all/xgb_foursquare_newyorkcity_spatial_1")
+    poi_density_analysis(
+        "outputs/cluster_runs_all/xgb_foursquare_newyorkcity_spatial_1/predictions_all_features_100.csv"
+    )
 

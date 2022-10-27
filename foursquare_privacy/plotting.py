@@ -37,7 +37,7 @@ def plot_confusion_matrix(labels, pred, col_names=None, normalize="sensitivity",
         return (
             np.asarray(
                 [
-                    "{0:.2f}\n".format(data) + u"\u00B1" + "{0:.2f}".format(text)
+                    "{0:.2f}\n".format(data) + "\u00B1" + "{0:.2f}".format(text)
                     for data, text in zip(data.flatten(), text.flatten())
                 ]
             )
@@ -157,6 +157,90 @@ def user_mae_plot(result_df, out_path):
     # plt.xticks(np.arange(len(data_nearest)), data_nearest["obfuscation"])
     plt.legend()
     plt.savefig(os.path.join(out_path, "user_mae_probs_by_obfuscation.png"))
+
+
+def plot_configurations(all_results):
+    compare_col = "split"
+    compare_second_level = "poi_data"
+    eval_col = "User-wise MAE"
+    agg_method = "mean"
+    cols_avail = ["method", "model", "poi_data", "city", "split"]
+    filter_columns = {"split": "spatial", "model": "xgb"}  # "poi_data": "foursquare",
+    assert compare_col not in filter_columns.keys() and compare_second_level not in filter_columns.keys()
+    print(
+        "Aggregating over",
+        [
+            col
+            for col in cols_avail
+            if col not in filter_columns.keys() and col != compare_col and col != compare_second_level
+        ],
+    )
+
+    # filter by all settings in filter_columns
+    results_filtered = all_results.copy()
+    for key, val in filter_columns.items():
+        results_filtered = results_filtered[results_filtered[key] == val]
+
+    results_filtered["obfuscation"] = results_filtered["obfuscation"].fillna(-1)
+    # group by the relevant columns
+    results_grouped = (
+        results_filtered.groupby(["obfuscation", compare_col, compare_second_level])
+        .agg({eval_col: agg_method})
+        .reset_index()
+    )
+
+    # print(results_grouped)
+    plot_lines = []
+    styles = ["-", "--", "-."]
+    cols = ["blue", "green", "red"]
+    plt.figure(figsize=(8, 7))
+    for i, uni_val in enumerate(results_filtered[compare_col].unique()):
+        plot_lines_innter = []
+        for j, uni_val_2 in enumerate(results_filtered[compare_second_level].unique()):
+            cond1 = results_grouped[compare_col] == uni_val
+            cond2 = results_grouped[compare_second_level] == uni_val_2
+            results_sub = results_grouped[cond1 & cond2]
+            if len(results_sub) == 1:
+                obs = results_grouped["obfuscation"].unique()
+                one_val = results_sub.iloc[0][eval_col]
+                (l1,) = plt.plot(
+                    obs,
+                    [one_val for _ in range(len(obs))],
+                    c=cols[i],
+                    linestyle=styles[j],
+                    label=f"{uni_val}_{uni_val_2}",
+                )
+            else:
+                (l1,) = plt.plot(
+                    results_sub["obfuscation"],
+                    results_sub[eval_col],
+                    c=cols[i],
+                    linestyle=styles[j],
+                    label=f"{uni_val}_{uni_val_2}",
+                )
+            plot_lines_innter.append(l1)
+        plot_lines.append(plot_lines_innter)
+
+        #
+    legend1 = plt.legend(
+        plot_lines[0],
+        results_filtered[compare_second_level].unique(),
+        loc="upper left",
+        title=compare_second_level.replace("_", " "),
+    )
+    plt.ylabel(eval_col)
+    plt.xlabel("Location masking (in m)")
+    plt.legend(
+        [l[0] for l in plot_lines],
+        results_filtered[compare_col].unique(),
+        loc="lower right",
+        title=compare_col.replace("_", " "),
+    )
+    plt.gca().add_artist(legend1)
+    filtered_keys = "_".join(list(filter_columns.values()))
+    plt.tight_layout()
+    plt.savefig(f"../figures/{compare_col}_{compare_second_level}_{eval_col}_({filtered_keys}).png")
+    plt.show()
 
 
 if __name__ == "__main__":
