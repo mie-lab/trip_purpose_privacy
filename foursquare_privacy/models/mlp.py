@@ -11,7 +11,7 @@ device = "cpu"
 class MLPWrapper:
     def __init__(self, model_params):
         self.model = None
-        self.config = {"batch_size": 8, "epochs": 30, "learning_rate": 1e-4}
+        self.config = {"batch_size": 8, "epochs": 50, "learning_rate": 1e-3, "entropy_loss_factor": 0, "converged": 10}
 
         self.config.update(model_params)
 
@@ -81,6 +81,7 @@ def train_model(
     epochs=10,
     learning_rate=1e-3,
     entropy_loss_factor=10,
+    converged=10,  # after how many stable epochs we define the model as converged
     save_path=None,  # os.path.join("trained_models", "test"),
     **kwargs,
 ):
@@ -107,8 +108,10 @@ def train_model(
 
     model.train()
     best_performance = 0
+    performance_counter = 0
     epoch_test_loss, epoch_train_loss = [], []
     for epoch in range(epochs):
+        performance_counter += 1
         losses = []
         for batch_num, input_data in enumerate(train_loader):
             optimizer.zero_grad()
@@ -155,12 +158,16 @@ def train_model(
                  | TEST loss {round(sum(test_losses) / len(test_losses), 2)} \n"
         )
         test_accuracy = np.sum(test_pred == gt_test_labels) / len(test_pred)
-        print("Accuracy:", round(test_accuracy, 2), {u: c for u, c in zip(uni, counts)})
+        print("Accuracy:", round(test_accuracy, 3), {u: c for u, c in zip(uni, counts)})
         if test_accuracy > best_performance:
             best_performance = test_accuracy
             best_model = model.state_dict()
+            performance_counter = 0
             # torch.save(model.state_dict(), os.path.join(save_path, "model"))
             # print("Saved model")
+        if performance_counter >= converged:
+            print("Early stopping at epoch ", epoch)
+            break
         print()
         # print(
         #     f"\n Epoch {epoch} (median) | TRAIN Loss {round(np.median(losses), 3)}\
