@@ -76,17 +76,23 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--data_path", default="data", type=str)
     parser.add_argument("-c", "--city", default="newyorkcity", type=str)
-    parser.add_argument("-o", "--out_name", default="1", type=str)
+    parser.add_argument("-o", "--out_dir", default=os.path.join("outputs", "test"), type=str)
     parser.add_argument("-p", "--poi_data", default="foursquare", type=str)
     parser.add_argument("-m", "--model", default="xgb", type=str)
     parser.add_argument("-f", "--fold_mode", default="spatial", type=str)
     parser.add_argument("-k", "--kfold", default=4, type=int)
+    parser.add_argument("-b", "--buffer", default=200, type=int)
     args = parser.parse_args()
 
     city = args.city
 
-    out_name_full = f"{args.model}_{args.poi_data}_{args.city}_{args.fold_mode}_{args.out_name}"
-    out_dir = os.path.join("outputs", out_name_full)
+    out_dir_base = args.out_dir
+    os.makedirs(out_dir_base, exist_ok=True)
+    out_name = f"{args.model}_{args.poi_data}_{args.city}_{args.fold_mode}"
+    out_dir = os.path.join(out_dir_base, out_name)
+    print(out_dir_base, out_dir)
+    if os.path.exists(out_dir):
+        print("Warning: Output directory already exists, may be overwriting files")
     os.makedirs(out_dir, exist_ok=True)
 
     # get model
@@ -134,7 +140,7 @@ if __name__ == "__main__":
 
         # get poi features
         poi_process = POI_processor(data, pois)
-        poi_process()
+        poi_process(buffer=args.buffer)
         distance_features = poi_process.distance_count_features()
         lda_features = poi_process.lda_features()
         assert len(distance_features) == len(lda_features)
@@ -142,6 +148,8 @@ if __name__ == "__main__":
 
         # version 2: together with user features
         dataset = data.merge(poi_features, left_on=["latitude", "longitude"], right_index=True, how="left")
+        print("Percentage of rows with at least one NaN", dataset.isna().any(axis=1).sum() / len(dataset))
+        dataset = data.fillna(0)
         # print("Merge user featuers and POI features", len(poi_features), len(data), len(dataset))
         # if any(pd.isna(dataset)):
         #     print("Attention: NaNs in data", sum(pd.isna(dataset)))
