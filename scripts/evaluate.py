@@ -75,15 +75,6 @@ def plot_results_for_one(base_path="outputs/xgb_foursquare_newyorkcity_spatial_1
     # user MAE plot
     user_mae_plot(result_df, out_path)
 
-    # Confusion matrix for one
-    results_one = pd.read_csv(os.path.join(base_path, "predictions_all_features_100.csv"))
-    plot_confusion_matrix(
-        results_one["ground_truth"],
-        results_one["prediction"],
-        col_names=np.unique(results_one["label"]),
-        out_path=os.path.join(out_path, "confusion_matrix.png"),
-    )
-
 
 def poi_density_analysis(result_csv_path, data_path="data", out_path="figures"):
     # Input: SINGLE CSV
@@ -107,7 +98,7 @@ def load_save_all_results(base_path="outputs/cluster_runs_all"):
     for subdir in os.listdir(base_path):
         if subdir[0] == ".":
             continue
-        infos = subdir.split("_")[:-1]
+        infos = subdir.split("_")
         result_dict = load_results(os.path.join(base_path, subdir))
         result_df = results_to_dataframe(result_dict)
         for i, col in enumerate(info_columns):
@@ -118,9 +109,23 @@ def load_save_all_results(base_path="outputs/cluster_runs_all"):
 
 
 if __name__ == "__main__":
-    # load_save_all_results()
-    # plot_results_for_one(base_path="outputs/cluster_runs_all/xgb_foursquare_newyorkcity_spatial_1")
-    poi_density_analysis(
-        "outputs/cluster_runs_all/xgb_foursquare_newyorkcity_spatial_1/predictions_all_features_100.csv"
-    )
+    # # 1) Multiple runs
+    load_save_all_results()
 
+    # # 2) One run (but all files of that run)
+    # plot_results_for_one(base_path="outputs/cluster_runs_all/xgb_osm_newyorkcity_spatial_1")
+
+    # # 3) Single files
+    # poi_density_analysis(
+    #     "outputs/cluster_runs_all/xgb_foursquare_newyorkcity_spatial_1/predictions_all_features_100.csv"
+    # )
+
+    # # Confusion matrix for one
+    # base_path = "outputs/cluster_runs_all/xgb_osm_newyorkcity_spatial_1"
+    # results_one = pd.read_csv(os.path.join(base_path, "predictions_all_features_0.csv"))
+    # plot_confusion_matrix(
+    #     results_one["ground_truth"],
+    #     results_one["prediction"],
+    #     col_names=np.unique(results_one["label"]),
+    #     out_path=os.path.join(base_path, "confusion_matrix.png"),
+    # )
