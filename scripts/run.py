@@ -81,7 +81,7 @@ if __name__ == "__main__":
     parser.add_argument("-m", "--model", default="xgb", type=str)
     parser.add_argument("-f", "--fold_mode", default="spatial", type=str)
     parser.add_argument("-k", "--kfold", default=4, type=int)
-    parser.add_argument("-b", "--buffer", default=200, type=int)
+    parser.add_argument("-b", "--buffer_factor", default=2, type=int)
     args = parser.parse_args()
 
     city = args.city
@@ -140,7 +140,7 @@ if __name__ == "__main__":
 
         # get poi features
         poi_process = POI_processor(data, pois)
-        poi_process(buffer=args.buffer)
+        poi_process(buffer=args.buffer_factor * masking)
         distance_features = poi_process.distance_count_features()
         lda_features = poi_process.lda_features()
         assert len(distance_features) == len(lda_features)
