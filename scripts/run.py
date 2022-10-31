@@ -149,7 +149,7 @@ if __name__ == "__main__":
         # version 2: together with user features
         dataset = data.merge(poi_features, left_on=["latitude", "longitude"], right_index=True, how="left")
         print("Percentage of rows with at least one NaN", dataset.isna().any(axis=1).sum() / len(dataset))
-        dataset = data.fillna(0)
+        dataset = dataset.fillna(0)
         # print("Merge user featuers and POI features", len(poi_features), len(data), len(dataset))
         # if any(pd.isna(dataset)):
         #     print("Attention: NaNs in data", sum(pd.isna(dataset)))
