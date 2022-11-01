@@ -105,57 +105,59 @@ def main_plot(result_df, out_path):
     plt.ylabel("Accuracy")
     # plt.xticks(np.arange(len(data_nearest)), data_nearest["obfuscation"])
     plt.legend()
+    plt.tight_layout()
     plt.savefig(os.path.join(out_path, "main_result_plot.png"))
 
 
 def user_mae_plot(result_df, out_path):
     user_results = result_df.dropna(subset=["User-wise MAE probs"])
     user_results = user_results.sort_values(["obfuscation", "method"])
-    timefeats_mae = user_results.set_index("method").loc["temporal"]["User-wise MAE"]
-    timefeats_mae_probs = user_results.set_index("method").loc["temporal"]["User-wise MAE probs"]
-    random_mae = user_results.set_index("method").loc["random"]["User-wise MAE"]
-    random_mae_probs = user_results.set_index("method").loc["random"]["User-wise MAE probs"]
+
+    timefeats_mae = {}
+    timefeats_mae["User-wise MAE"] = user_results.set_index("method").loc["temporal"]["User-wise MAE"]
+    timefeats_mae["User-wise MAE probs"] = user_results.set_index("method").loc["temporal"]["User-wise MAE probs"]
+
+    random_mae = {}
+    random_mae["User-wise MAE"] = user_results.set_index("method").loc["random"]["User-wise MAE"]
+    random_mae["User-wise MAE probs"] = user_results.set_index("method").loc["random"]["User-wise MAE probs"]
+
     user_results = user_results.dropna(subset=["obfuscation"])
+    x_obfuscation = user_results["obfuscation"].unique()
 
     plt.figure(figsize=(10, 6))
-    plt.plot(user_results["obfuscation"], user_results["User-wise MAE"], label="Hard labels (all features)", c="blue")
-    plt.plot(
-        user_results["obfuscation"],
-        user_results["User-wise MAE probs"],
-        label="Soft labels (all features)",
-        linestyle="--",
-        c="blue",
-    )
-    plt.plot(
-        user_results["obfuscation"],
-        [timefeats_mae for _ in range(len(user_results))],
-        label="Hard labels (temporal features)",
-        c="green",
-    )
-    plt.plot(
-        user_results["obfuscation"],
-        [timefeats_mae_probs for _ in range(len(user_results))],
-        label="Soft labels (temporal features)",
-        linestyle="--",
-        c="green",
-    )
-    plt.plot(
-        user_results["obfuscation"],
-        [random_mae for _ in range(len(user_results))],
-        label="Hard labels (random)",
-        c="grey",
-    )
-    plt.plot(
-        user_results["obfuscation"],
-        [random_mae_probs for _ in range(len(user_results))],
-        label="Soft labels (random)",
-        linestyle="--",
-        c="grey",
-    )
+    plot_lines = []
+    styles = ["-", "--", "-."]
+    cols = ["blue", "green", "grey"]
+    feat_labels = ["All features", "Temporal features", "Random"]
+    mode_labels = ["Hard labels", "Soft labels"]
+    for i, feat_type in enumerate([user_results, timefeats_mae, random_mae]):
+        plot_lines_inner = []
+        for j, mode in enumerate(["User-wise MAE", "User-wise MAE probs"]):
+            data_to_plot = feat_type[mode]
+            if isinstance(data_to_plot, float):
+                (l1,) = plt.plot(
+                    x_obfuscation,
+                    [data_to_plot for _ in range(len(user_results))],
+                    label=f"{mode_labels[j]} ({feat_labels[i]})",
+                    c=cols[i],
+                    linestyle=styles[j],
+                )
+            else:
+                (l1,) = plt.plot(
+                    x_obfuscation,
+                    data_to_plot,
+                    label=f"{mode_labels[j]} ({feat_labels[i]})",
+                    c=cols[i],
+                    linestyle=styles[j],
+                )
+            plot_lines_inner.append(l1)
+        plot_lines.append(plot_lines_inner)
     plt.xlabel("Obfuscation (in meters)")
     plt.ylabel("User-wise distribution MAE")
-    # plt.xticks(np.arange(len(data_nearest)), data_nearest["obfuscation"])
-    plt.legend()
+    legend1 = plt.legend(plot_lines[0], mode_labels, loc="upper left")
+    plt.legend([l[0] for l in plot_lines], feat_labels, loc="lower right")
+    plt.gca().add_artist(legend1)
+    plt.tight_layout()
     plt.savefig(os.path.join(out_path, "user_mae_probs_by_obfuscation.png"))
 
 
