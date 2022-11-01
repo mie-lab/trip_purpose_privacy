@@ -9,7 +9,7 @@ import pandas as pd
 from sklearn.metrics import accuracy_score, balanced_accuracy_score
 
 from foursquare_privacy.plotting import plot_confusion_matrix, user_mae_plot, main_plot
-from foursquare_privacy.utils.user_distribution import get_user_dist_mae
+from foursquare_privacy.utils.user_distribution import get_user_dist_mae, user_identification_accuracy
 
 
 def results_to_dataframe(result_dict):
@@ -40,13 +40,15 @@ def load_results(base_path):
         user_mae = np.mean(get_user_dist_mae(result_df))
         try:
             user_mae_probs = np.mean(get_user_dist_mae(result_df, True))
+            user_identify = user_identification_accuracy(result_df)
         except AssertionError:
-            user_mae_probs = pd.NA
+            user_mae_probs, user_identify = pd.NA, pd.NA
         result_dict[name] = {
             "Accuracy": acc,
             "Balanced accuracy": bal_acc,
             "User-wise MAE": user_mae,
             "User-wise MAE probs": user_mae_probs,
+            "User profile identification": user_identify,
         }
     return result_dict
 
