@@ -14,9 +14,10 @@ class XGBWrapper:
         return self.model.predict_proba(test_x)
 
     def save(self, save_path):
+        os.makedirs(os.path.join("trained_models", save_path), exist_ok=True)
         with open(os.path.join("trained_models", save_path, "xgb_model.p"), "wb") as outfile:
             pickle.dump(self.model, outfile)
 
     def load(self, load_path):
-        with open(os.path.join("trained_models", load_path, "xgb_model.p"), "wb") as infile:
+        with open(os.path.join("trained_models", load_path, "xgb_model.p"), "rb") as infile:
             self.model = pickle.load(infile)
