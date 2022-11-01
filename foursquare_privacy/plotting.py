@@ -109,17 +109,18 @@ def main_plot(result_df, out_path):
     plt.savefig(os.path.join(out_path, "main_result_plot.png"))
 
 
-def user_mae_plot(result_df, out_path):
-    user_results = result_df.dropna(subset=["User-wise MAE probs"])
+def user_mae_plot(result_df, out_path, metric="User-wise MAE"):
+    metric_probs = metric + " probs"
+    user_results = result_df.dropna(subset=[metric_probs])
     user_results = user_results.sort_values(["obfuscation", "method"])
 
     timefeats_mae = {}
-    timefeats_mae["User-wise MAE"] = user_results.set_index("method").loc["temporal"]["User-wise MAE"]
-    timefeats_mae["User-wise MAE probs"] = user_results.set_index("method").loc["temporal"]["User-wise MAE probs"]
+    timefeats_mae[metric] = user_results.set_index("method").loc["temporal"][metric]
+    timefeats_mae[metric_probs] = user_results.set_index("method").loc["temporal"][metric_probs]
 
     random_mae = {}
-    random_mae["User-wise MAE"] = user_results.set_index("method").loc["random"]["User-wise MAE"]
-    random_mae["User-wise MAE probs"] = user_results.set_index("method").loc["random"]["User-wise MAE probs"]
+    random_mae[metric] = user_results.set_index("method").loc["random"][metric]
+    random_mae[metric_probs] = user_results.set_index("method").loc["random"][metric_probs]
 
     user_results = user_results.dropna(subset=["obfuscation"])
     x_obfuscation = user_results["obfuscation"].unique()
@@ -132,7 +133,7 @@ def user_mae_plot(result_df, out_path):
     mode_labels = ["Hard labels", "Soft labels"]
     for i, feat_type in enumerate([user_results, timefeats_mae, random_mae]):
         plot_lines_inner = []
-        for j, mode in enumerate(["User-wise MAE", "User-wise MAE probs"]):
+        for j, mode in enumerate([metric, metric_probs]):
             data_to_plot = feat_type[mode]
             if isinstance(data_to_plot, float):
                 (l1,) = plt.plot(
@@ -153,19 +154,21 @@ def user_mae_plot(result_df, out_path):
             plot_lines_inner.append(l1)
         plot_lines.append(plot_lines_inner)
     plt.xlabel("Obfuscation (in meters)")
-    plt.ylabel("User-wise distribution MAE")
+    label_mapping = {
+        "User-wise MAE": "User-wise distribution MAE",
+        "Profile identification": "User identification (top-5 accuracy)",
+    }
+    plt.ylabel(label_mapping[metric])
     legend1 = plt.legend(plot_lines[0], mode_labels, loc="upper left")
     plt.legend([l[0] for l in plot_lines], feat_labels, loc="lower right")
     plt.gca().add_artist(legend1)
     plt.tight_layout()
-    plt.savefig(os.path.join(out_path, "user_mae_probs_by_obfuscation.png"))
+    plt.savefig(os.path.join(out_path, f"user_performance_({metric}).png"))
 
 
-def plot_configurations(all_results):
-    compare_col = "split"
-    compare_second_level = "poi_data"
-    eval_col = "User-wise MAE"
-    agg_method = "mean"
+def plot_configurations(
+    all_results, compare_col="split", compare_second_level="poi_data", eval_col="Accuracy", agg_method="mean"
+):
     cols_avail = ["method", "model", "poi_data", "city", "split"]
     filter_columns = {"split": "spatial", "model": "xgb"}  # "poi_data": "foursquare",
     assert compare_col not in filter_columns.keys() and compare_second_level not in filter_columns.keys()

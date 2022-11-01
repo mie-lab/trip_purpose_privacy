@@ -4,7 +4,7 @@ import numpy as np
 from sklearn.metrics import pairwise_distances
 
 
-def get_user_dist_mae(results, use_probabilities=False):
+def get_dist_per_user(results, use_probabilities=False):
     # Either using the hard labels or there must be probabilities in the results dataframe
     assert use_probabilities == False or any([col.startswith("proba") for col in results.columns])
 
@@ -30,6 +30,11 @@ def get_user_dist_mae(results, use_probabilities=False):
     # group by user
     gt_user = gt_dummies.groupby(["user_id"]).agg(agg_dict_gt)
     pred_user = pred_dummies.groupby("user_id").agg(agg_dict_pred)
+    return gt_user, pred_user
+
+
+def get_user_dist_mae(results, use_probabilities=False):
+    gt_user, pred_user = get_dist_per_user(results, use_probabilities)
 
     assert all(gt_user.index == pred_user.index)
 
@@ -37,16 +42,8 @@ def get_user_dist_mae(results, use_probabilities=False):
     return mae
 
 
-def user_identification_accuracy(results, top_k=5):
-    gt_dummies = pd.concat((results[["user_id"]], pd.get_dummies(results["label"], prefix="gt")), axis=1)
-    pred_columns = [col for col in results if col.startswith("proba")]
-    pred_dummies = results[["user_id"] + pred_columns]
-    agg_dict_gt = {col: "mean" for col in gt_dummies.columns if col.startswith("gt_")}
-    agg_dict_pred = {col: "mean" for col in pred_columns}
-
-    # group by user
-    gt_user = gt_dummies.groupby(["user_id"]).agg(agg_dict_gt)
-    pred_user = pred_dummies.groupby("user_id").agg(agg_dict_pred)
+def user_identification_accuracy(results, top_k=5, use_probabilities=False):
+    gt_user, pred_user = get_dist_per_user(results, use_probabilities)
 
     # use np array
     gt_user = np.array(gt_user)

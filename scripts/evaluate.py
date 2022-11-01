@@ -23,7 +23,7 @@ def results_to_dataframe(result_dict):
     return result_df.sort_values(["obfuscation", "method"])
 
 
-def load_results(base_path):
+def load_results(base_path, top_k=5):
     files_for_eval = [f for f in os.listdir(base_path) if f.startswith("predictions")]
     # make random file at first
     any_results_file = pd.read_csv(os.path.join(base_path, files_for_eval[0]))
@@ -38,17 +38,20 @@ def load_results(base_path):
         acc = accuracy_score(result_df["ground_truth"], result_df["prediction"])
         bal_acc = balanced_accuracy_score(result_df["ground_truth"], result_df["prediction"])
         user_mae = np.mean(get_user_dist_mae(result_df))
+        user_identify = user_identification_accuracy(result_df, top_k)
+
         try:
             user_mae_probs = np.mean(get_user_dist_mae(result_df, True))
-            user_identify = user_identification_accuracy(result_df)
+            user_identify_probs = user_identification_accuracy(result_df, top_k, True)
         except AssertionError:
-            user_mae_probs, user_identify = pd.NA, pd.NA
+            user_mae_probs, user_identify_probs = pd.NA, pd.NA
         result_dict[name] = {
             "Accuracy": acc,
             "Balanced accuracy": bal_acc,
             "User-wise MAE": user_mae,
             "User-wise MAE probs": user_mae_probs,
-            "User profile identification": user_identify,
+            "Profile identification": user_identify,
+            "Profile identification probs": user_identify_probs,
         }
     return result_dict
 
@@ -74,8 +77,11 @@ def plot_results_for_one(base_path="outputs/xgb_foursquare_newyorkcity_spatial_1
     # main plot
     main_plot(result_df, out_path)
 
+    # user identification plot
+    user_mae_plot(result_df, out_path, metric="Profile identification")
+
     # user MAE plot
-    user_mae_plot(result_df, out_path)
+    user_mae_plot(result_df, out_path, metric="User-wise MAE")
 
 
 def poi_density_analysis(result_csv_path, data_path="data", out_path="figures"):
@@ -112,10 +118,10 @@ def load_save_all_results(base_path="outputs/cluster_runs_all"):
 
 if __name__ == "__main__":
     # # 1) Multiple runs
-    load_save_all_results()
+    # load_save_all_results()
 
     # # 2) One run (but all files of that run)
-    # plot_results_for_one(base_path="outputs/cluster_runs_all/xgb_osm_newyorkcity_spatial_1")
+    plot_results_for_one(base_path="outputs/best_runs/xgb_foursquare_newyorkcity_spatial_1")
 
     # # 3) Single files
     # poi_density_analysis(
