@@ -159,8 +159,12 @@ def user_mae_plot(result_df, out_path, metric="User-wise MAE"):
         "Profile identification": "User identification (top-5 accuracy)",
     }
     plt.ylabel(label_mapping[metric])
-    legend1 = plt.legend(plot_lines[0], mode_labels, loc="upper left")
-    plt.legend([l[0] for l in plot_lines], feat_labels, loc="lower right")
+    if metric == "Profile identification":
+        legend1 = plt.legend(plot_lines[0], mode_labels, loc="upper right")
+        plt.legend([l[0] for l in plot_lines], feat_labels, loc="center right")
+    else:
+        legend1 = plt.legend(plot_lines[0], mode_labels, loc="upper left")
+        plt.legend([l[0] for l in plot_lines], feat_labels, loc="lower right")
     plt.gca().add_artist(legend1)
     plt.tight_layout()
     plt.savefig(os.path.join(out_path, f"user_performance_({metric}).png"))

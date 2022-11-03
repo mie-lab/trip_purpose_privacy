@@ -24,16 +24,16 @@ if __name__ == "__main__":
         .rename(columns={"poi_type": "poi_density"})
     )
 
-    plt.hist(count_per_lon_lat["poi_type"], bins=100)
-    plt.xlabel("Number of surrounding POIs (within 500m)", fontsize=15)
-    plt.tight_layout()
-    plt.savefig(os.path.join("figures", f"poi_density_histogram_{args.poi_data}.png"))
-    plt.show()
+    # plt.hist(count_per_lon_lat["poi_density"], bins=100)
+    # plt.xlabel("Number of surrounding POIs (within 500m)", fontsize=15)
+    # plt.tight_layout()
+    # plt.savefig(os.path.join("figures", f"poi_density_histogram_{args.poi_data}.png"))
+    # plt.show()
 
     poi_density_per_venue = data_raw.merge(
         count_per_lon_lat, how="left", left_on=["latitude", "longitude"], right_on=["latitude", "longitude"],
     )[["venue_id", "poi_density"]]
 
     poi_density_per_venue.to_csv(
-        os.path.join(args.data_path, f"poi_density_{args.city}_{args.poi_data}.csv"), index=False
+        os.path.join(args.data_path, f"poi_density_{args.city}_{args.poi_data}_{args.buffer}.csv"), index=False
     )
