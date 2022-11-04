@@ -37,6 +37,7 @@ def read_gdf_csv(path):
     # add datetime
     # data["local_time"] = pd.to_datetime(data["local_time"])
     data = data[data["label"] != "other"]
+    data = data[data["label"] != "Other"]
     return data
 
 
@@ -54,4 +55,5 @@ def read_poi_geojson(path):
         gdf.to_crs("EPSG:2056", inplace=True)
     # remove other label
     gdf = gdf[gdf["poi_my_label"] != "other"]
+    gdf = gdf[gdf["poi_my_label"] != "Other"]
     return gdf

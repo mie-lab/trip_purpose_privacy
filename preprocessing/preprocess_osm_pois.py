@@ -6,7 +6,7 @@ from pyrosm import get_data
 
 out_path = "data"
 
-for city in ["newyorkcity", "tokyo"]:
+for city in ["Zuerich", "newyorkcity", "tokyo"]:
     fp = get_data(city)
     # Initialize the OSM parser object
     osm = OSM(fp)
@@ -54,8 +54,7 @@ for city in ["newyorkcity", "tokyo"]:
     # remove parking stuff
     pois_simple = pois_simple[pois_simple["amenity"] != "parking"]
     pois_simple = pois_simple[pois_simple["amenity"] != "parking_space"]
-
-    pois_simple.to_file(os.path.join(out_path, f"pois_{city}_osm_raw.geojson"), driver="GeoJSON")
+    # pois_simple.to_file(os.path.join(out_path, f"pois_{city}_osm_raw.geojson"), driver="GeoJSON")
 
     with open(os.path.join(out_path, "osm_poi_mapping.json"), "r") as infile:
         osm_poi_mapping = json.load(infile)
@@ -86,5 +85,7 @@ for city in ["newyorkcity", "tokyo"]:
     print("Number of POIs that are dropped because they cannot be assigned a label:", prev_len - len(pois_simple))
 
     # save
+    if city == "Zuerich":
+        city = "yumuv"
     pois_simple.to_file(os.path.join(out_path, f"pois_{city}_osm.geojson"), driver="GeoJSON")
     print(f"Saving {len(pois_simple)} POIs")

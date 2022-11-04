@@ -41,6 +41,13 @@ python preprocessing/get_swiss_pois.py
 python preprocessing/get_user_venue_dataset.py
 ```
 
+### 5) Get OSM POIs
+
+Download OSM data with pyrosm package and select and label the relevant ones:
+```
+python preprocessing/preprocess_osm_pois.py
+```
+
 ## Prediction
 
 ```
