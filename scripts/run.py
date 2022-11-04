@@ -17,8 +17,8 @@ model_dict = {"xgb": {"model_class": XGBWrapper, "config": {}}, "mlp": {"model_c
 # xgb config: tree_method="gpu_hist", gpu_id=0 if gpu available
 
 
-def cross_validation(dataset, folds, models=[]):
-    if len(models) == 0:
+def cross_validation(dataset, folds, models=[], save_name=None, load_name=None):
+    if len(models) == 0 and load_name is None:
         print("Training models...")
     else:
         print("Apply trained models on obfuscated data")
@@ -43,14 +43,22 @@ def cross_validation(dataset, folds, models=[]):
         train_y = labels.drop(fold_samples)
 
         # Option 1: train mode --> models are not given
-        if len(models) < len(folds):
+        if len(models) < len(folds) and load_name is None:
             # fit and predict
             model = ModelClass(model_config)  # smaller max depth did not help
             model.fit(train_x, train_y)
+            if save_name is not None:
+                model.save(f"{save_name}_fold{fold_num}")
+                print("Saved model:", f"{save_name}_fold{fold_num}")
             models.append(model)
         # Option 2: test mode --> models given, just apply
         else:
-            model = models[fold_num]
+            if load_name is not None:
+                model = ModelClass(model_config)
+                model.load(f"{load_name}_fold{fold_num}")
+                print("Loaded model", f"{load_name}_fold{fold_num}")
+            else:
+                model = models[fold_num]
         y_pred_proba = model.predict(test_x)
         y_pred = np.argmax(y_pred_proba, axis=1)
         # y_pred = np.random.choice(np.arange(12), len(test_x))  # testing
@@ -81,7 +89,8 @@ if __name__ == "__main__":
     parser.add_argument("-m", "--model", default="xgb", type=str)
     parser.add_argument("-f", "--fold_mode", default="spatial", type=str)
     parser.add_argument("-k", "--kfold", default=4, type=int)
-    parser.add_argument("-b", "--buffer_factor", default=2, type=int)
+    parser.add_argument("-b", "--buffer_factor", default=1.5, type=float)
+    parser.add_argument("-l", "--lda", action="store_true")
     args = parser.parse_args()
 
     city = args.city
@@ -100,7 +109,7 @@ if __name__ == "__main__":
     model_config = model_dict[args.model]["config"]
 
     # load data
-    data_raw = read_gdf_csv(os.path.join(args.data_path, f"foursquare_{city}_features.csv"))
+    data_raw = read_gdf_csv(os.path.join(args.data_path, f"checkin_{city}_features.csv"))
     pois = read_poi_geojson(os.path.join(args.data_path, f"pois_{city}_{args.poi_data}.geojson"))
 
     # Split data
@@ -117,8 +126,15 @@ if __name__ == "__main__":
     _, results_only_user = cross_validation(data_raw, folds)
     print_results(results_only_user, "temporal_features")
 
+    # # Uncomment to keep only the spacial features:
+    # drop_cols = [col for col in data_raw.columns if col.startswith("feat")]
+    # print("Dropping features: ", drop_cols)
+    # data_raw.drop(drop_cols, axis=1, inplace=True)
+    # print(data_raw.columns)
+
     # obfuscate coordinates
-    for masking in [0, 25, 50, 100, 200]:
+    for masking in [0, 25, 50, 100, 200, 400, 800, 1600]:
+        buffering = max(args.buffer_factor * masking, 400)
         print(f"-------- Masking {masking} ---------")
         if masking == 0:
             data = data_raw.copy()
@@ -140,11 +156,12 @@ if __name__ == "__main__":
 
         # get poi features
         poi_process = POI_processor(data, pois)
-        poi_process(buffer=args.buffer_factor * masking)
-        distance_features = poi_process.distance_count_features()
-        lda_features = poi_process.lda_features()
-        assert len(distance_features) == len(lda_features)
-        poi_features = distance_features.merge(lda_features, left_index=True, right_index=True)
+        poi_process(buffer=buffering)
+        poi_features = poi_process.distance_count_features()
+        if args.lda:
+            lda_features = poi_process.lda_features()
+            assert len(poi_features) == len(lda_features)
+            poi_features = poi_features.merge(lda_features, left_index=True, right_index=True)
 
         # version 2: together with user features
         dataset = data.merge(poi_features, left_on=["latitude", "longitude"], right_index=True, how="left")

@@ -51,7 +51,7 @@ def read_poi_geojson(path):
         print("Projecting POIs into TKY CRS")
         gdf.to_crs("EPSG:30169", inplace=True)
     elif "yumuv" in path:
-        print("Projecting into Swiss CRS")
+        print("Projecting POIs into Swiss CRS")
         gdf.to_crs("EPSG:2056", inplace=True)
     # remove other label
     gdf = gdf[gdf["poi_my_label"] != "other"]
