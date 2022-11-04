@@ -68,8 +68,10 @@ def get_duration_feature(inp_data):
     data = inp_data.copy()
     # problem: now we have the time diff to the previous one. We need that for merging two entries (delete second check in)
     # however, for computing the duration we want to have the time diff to the next one. so we roll again
-    data["next_check_in_time"] = data["local_time"].shift(-1)
-    data["duration"] = (data["next_check_in_time"] - data["local_time"]).dt.total_seconds() / 3600
+    if "finished_at" not in data.columns:
+        print("Approximate finished at by next check in.")
+        data["finished_at"] = data["local_time"].shift(-1)
+    data["duration"] = (data["finished_at"] - data["local_time"]).dt.total_seconds() / 3600
     nanmean = np.nanmean(data.loc[data["duration"] > 0, "duration"])
     data.loc[data["duration"] < 0, "duration"] = nanmean
     data.loc[pd.isna(data["duration"]), "duration"] = nanmean

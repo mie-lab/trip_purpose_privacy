@@ -26,6 +26,9 @@ def read_gdf_csv(path):
     elif "tokyo" in path or "tky" in path:
         print("Projecting into TKY CRS")
         data.to_crs("EPSG:30169", inplace=True)
+    elif "yumuv" in path:
+        print("Projecting into Swiss CRS")
+        data.to_crs("EPSG:2056", inplace=True)
     else:
         raise RuntimeError("Can only handly ny or tky")
     # adjust lon and lat to crs
@@ -46,6 +49,9 @@ def read_poi_geojson(path):
     elif "tokyo" in path or "tky" in path:
         print("Projecting POIs into TKY CRS")
         gdf.to_crs("EPSG:30169", inplace=True)
+    elif "yumuv" in path:
+        print("Projecting into Swiss CRS")
+        gdf.to_crs("EPSG:2056", inplace=True)
     # remove other label
     gdf = gdf[gdf["poi_my_label"] != "other"]
     return gdf
