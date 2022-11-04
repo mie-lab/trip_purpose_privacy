@@ -6,7 +6,7 @@ from shapely import wkt
 if __name__ == "__main__":
     out_path = "data"
     for city in ["tokyo", "newyorkcity"]:
-        data = pd.read_csv(os.path.join("data", f"foursquare_{city}.csv"))
+        data = pd.read_csv(os.path.join("data", f"checkin_{city}.csv"))
         # group by geometry
         poi_foursquare = data.groupby(["latitude", "longitude"]).agg(
             {"label": "first", "category": "first", "geometry": "first"}

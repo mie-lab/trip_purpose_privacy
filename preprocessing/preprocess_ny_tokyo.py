@@ -1,11 +1,11 @@
 from shapely import wkt
 import os
+import json
 import pandas as pd
 import geopandas as gpd
 from datetime import timedelta
 
 from foursquare_privacy.utils.io import txt_to_df
-from foursquare_privacy.utils.purpose_categories import get_purpose_category
 
 
 def month_to_number(x):
@@ -57,6 +57,9 @@ for city in ["NYC", "TKY"]:
     )
     df.index.name = "id"
 
+    with open(os.path.join("data", "foursquare_taxonomy.json"), "r") as infile:
+        poi_taxonomy = json.load(infile)
+
     # get datetime object
     df["time"] = df["utc_time"].str[4:-10]
     df["time"] = df["time"].apply(month_to_number)
@@ -67,7 +70,7 @@ for city in ["NYC", "TKY"]:
     df["local_time"] = df.apply(lambda row: row["time"] + timedelta(minutes=row["timezone_offset"]), axis=1)
 
     # get label
-    df["label"] = df["category"].apply(get_purpose_category)
+    df["label"] = df["category"].map(poi_taxonomy)
 
     # drop the ones that have more than one label at the same location
     prev_len = len(df)
@@ -82,5 +85,5 @@ for city in ["NYC", "TKY"]:
     gdf["geometry"] = gdf["geometry"].apply(wkt.dumps)
 
     # save
-    gdf.to_csv(os.path.join("data", f"foursquare_{name_mapping[city]}.csv"))
+    gdf.to_csv(os.path.join("data", f"checkin_{name_mapping[city]}.csv"))
     print("Saved to file", city, "number records", len(gdf))

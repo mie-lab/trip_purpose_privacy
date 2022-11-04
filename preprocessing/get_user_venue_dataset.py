@@ -6,12 +6,10 @@ from foursquare_privacy.utils.io import read_gdf_csv
 
 if __name__ == "__main__":
     for city in ["yumuv", "tokyo", "newyorkcity"]:
-        if city != "yumuv":
-            city = f"foursquare_{city}"
         # for yumuv we don't need to change the venue ID
         correct_venue_id = False if city == "yumuv" else True
 
-        data = pd.read_csv(os.path.join("data", f"{city}.csv"))
+        data = pd.read_csv(os.path.join("data", f"checkin_{city}.csv"))
 
         # to datetime
         data["local_time"] = pd.to_datetime(data["local_time"])
@@ -53,6 +51,6 @@ if __name__ == "__main__":
 
         assert all(pd.isna(user_venue_data).sum() == 0), "NaNs in user venue dataframe"
 
-        user_venue_data.to_csv(os.path.join("data", f"{city}_features.csv"))
+        user_venue_data.to_csv(os.path.join("data", f"checkin_{city}_features.csv"))
 
         print(f"Saved user-features dataframe for {city}, length {len(user_venue_data)}")

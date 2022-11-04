@@ -7,7 +7,7 @@ import geopandas as gpd
 
 
 if __name__ == "__main__":
-
+    out_path = "data"
     with open(os.path.join("data", "foursquare_taxonomy.json"), "r") as infile:
         poi_taxonomy = json.load(infile)
 
@@ -29,8 +29,6 @@ if __name__ == "__main__":
     # to gdf
     gdf = gpd.GeoDataFrame(
         swiss_pois, geometry=gpd.points_from_xy(swiss_pois["longitude"], swiss_pois["latitude"]), crs="epsg:4326"
-    )
-    gdf["geometry"] = gdf["geometry"].apply(wkt.dumps)
-
+    ).drop(["longitude", "latitude"], axis=1)
     # save
-    gdf.to_csv(os.path.join("data", "foursquare_switzerland.csv"))
+    gdf.to_file(os.path.join(out_path, f"pois_yumuv_foursquare.geojson"), driver="GeoJSON")

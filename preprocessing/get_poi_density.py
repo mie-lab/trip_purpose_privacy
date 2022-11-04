@@ -13,7 +13,7 @@ if __name__ == "__main__":
     parser.add_argument("-b", "--buffer", default=500, type=int)
     args = parser.parse_args()
     city = args.city
-    data_raw = read_gdf_csv(os.path.join(args.data_path, f"foursquare_{city}_features.csv"))
+    data_raw = read_gdf_csv(os.path.join(args.data_path, f"checkin_{city}_features.csv"))
     pois = read_poi_geojson(os.path.join(args.data_path, f"pois_{city}_{args.poi_data}.geojson"))
 
     poi_process = POI_processor(data_raw, pois)

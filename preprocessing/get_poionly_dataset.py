@@ -12,7 +12,7 @@ from foursquare_privacy.plotting import confusion_matrix, plot_confusion_matrix
 if __name__ == "__main__":
     distance_features, geom_with_poi, labels = [], [], []
     for city in ["tokyo", "newyorkcity"]:
-        data = read_gdf_csv(os.path.join("data", f"foursquare_{city}.csv"))
+        data = read_gdf_csv(os.path.join("data", f"checkin_{city}.csv"))
         poi_path = os.path.join("data", f"pois_{city}_labelled.geojson")
 
         # get poi features

@@ -59,4 +59,4 @@ if __name__ == "__main__":
     ).drop(["purpose"], axis=1, errors="ignore")
 
     sp_filtered["geometry"] = sp_filtered["geometry"].apply(wkt.dumps)
-    sp_filtered.to_csv(os.path.join("data", f"yumuv.csv"))
+    sp_filtered.to_csv(os.path.join("data", "checkin_yumuv.csv"))
