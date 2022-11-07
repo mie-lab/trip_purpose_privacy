@@ -17,7 +17,7 @@ model_dict = {"xgb": {"model_class": XGBWrapper, "config": {}}, "mlp": {"model_c
 # xgb config: tree_method="gpu_hist", gpu_id=0 if gpu available
 
 
-def cross_validation(dataset, folds, models=[], save_name=None, load_name=None):
+def cross_validation(dataset, folds, models=[], save_name=None, load_name=None, save_feature_importance=False):
     if len(models) == 0 and load_name is None:
         print("Training models...")
     else:
@@ -66,6 +66,10 @@ def cross_validation(dataset, folds, models=[], save_name=None, load_name=None):
         result_df.loc[fold_samples, proba_columns] = y_pred_proba
         result_df.loc[fold_samples, "prediction"] = y_pred
         # print(f"Accuracy fold {fold_num+1}:", sum(y_pred == test_y) / len(test_y))
+    # save features importance
+    if save_feature_importance:
+        with open(os.path.join(out_dir, f"feature_importance_{masking}.json"), "w") as outfile:
+            json.dump(models[0].feature_importance, outfile)
     return models, result_df
 
 
@@ -90,6 +94,8 @@ if __name__ == "__main__":
     parser.add_argument("-f", "--fold_mode", default="spatial", type=str)
     parser.add_argument("-k", "--kfold", default=4, type=int)
     parser.add_argument("-b", "--buffer_factor", default=1.5, type=float)
+    # minimum buffer around the location, aside from the buffer factor
+    parser.add_argument("--min_buffer", default=100, type=float)
     parser.add_argument("-l", "--lda", action="store_true")
     args = parser.parse_args()
 
@@ -110,7 +116,14 @@ if __name__ == "__main__":
 
     # load data
     data_raw = read_gdf_csv(os.path.join(args.data_path, f"checkin_{city}_features.csv"))
-    pois = read_poi_geojson(os.path.join(args.data_path, f"pois_{city}_{args.poi_data}.geojson"))
+    if args.poi_data == "both":
+        pois_1 = read_poi_geojson(os.path.join(args.data_path, f"pois_{city}_foursquare.geojson"))
+        pois_2 = read_poi_geojson(os.path.join(args.data_path, f"pois_{city}_osm.geojson"))
+        pois = pd.concat((pois_2[["id", "poi_my_label", "poi_type", "geometry"]], pois_1))
+        pois_1, pois_2 = None, None  # free space of variable
+    else:
+        pois = read_poi_geojson(os.path.join(args.data_path, f"pois_{city}_{args.poi_data}.geojson"))
+    print(f"Using {len(pois)} pois")
 
     # Split data
     np.random.seed(42)
@@ -126,15 +139,11 @@ if __name__ == "__main__":
     _, results_only_user = cross_validation(data_raw, folds)
     print_results(results_only_user, "temporal_features")
 
-    # # Uncomment to keep only the spacial features:
-    # drop_cols = [col for col in data_raw.columns if col.startswith("feat")]
-    # print("Dropping features: ", drop_cols)
-    # data_raw.drop(drop_cols, axis=1, inplace=True)
-    # print(data_raw.columns)
+    temporal_feats = [col for col in data_raw.columns if col.startswith("feat")]
 
     # obfuscate coordinates
-    for masking in [0, 25, 50, 100, 200, 400, 800, 1600]:
-        buffering = max(args.buffer_factor * masking, 400)
+    for masking in [25, 50, 100, 200, 400, 800, 1200, 1600]:
+        buffering = max(args.buffer_factor * masking, args.min_buffer)
         print(f"-------- Masking {masking} ---------")
         if masking == 0:
             data = data_raw.copy()
@@ -162,6 +171,7 @@ if __name__ == "__main__":
             lda_features = poi_process.lda_features()
             assert len(poi_features) == len(lda_features)
             poi_features = poi_features.merge(lda_features, left_index=True, right_index=True)
+        del poi_process
 
         # version 2: together with user features
         dataset = data.merge(poi_features, left_on=["latitude", "longitude"], right_index=True, how="left")
@@ -171,13 +181,18 @@ if __name__ == "__main__":
         # if any(pd.isna(dataset)):
         #     print("Attention: NaNs in data", sum(pd.isna(dataset)))
 
-        _, result_df = cross_validation(dataset, folds, models=[])
+        _, result_df = cross_validation(dataset, folds, models=[], save_feature_importance=True)
+        print_results(result_df, f"all_features_{masking}")
+
+        dataset_spatial = dataset.drop(temporal_feats, axis=1)
+        _, result_df = cross_validation(dataset_spatial, folds, models=[])
+        print_results(result_df, f"spatial_features_{masking}")
+
         # # CODE to train only on non-obfuscated and test on others
         # if masking == 0:
         #     models, result_df = cross_validation(dataset, folds, models)
         # else:
         #     _, result_df = cross_validation(dataset, folds, models)
-        print_results(result_df, f"all_features_{masking}")
 
     with open(os.path.join(out_dir, "results.json"), "w") as outfile:
         json.dump(results_dict, outfile)

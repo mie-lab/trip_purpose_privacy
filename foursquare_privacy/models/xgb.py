@@ -9,6 +9,7 @@ class XGBWrapper:
 
     def fit(self, train_x, train_y):
         self.model.fit(train_x, train_y)
+        self.feature_importance = self.model.get_booster().get_score(importance_type="gain")
 
     def predict(self, test_x):
         return self.model.predict_proba(test_x)

@@ -6,12 +6,17 @@ import pandas as pd
 from sklearn.metrics import confusion_matrix
 
 
-def plot_label_distribution(labels, out_path=os.path.join("data", "label_distribution.png")):
-    uni, counts = np.unique(labels, return_counts=True)
+def poi_dist_plot(label_list, out_path=None, size=(8, 6), title="Foursquare POI distribution"):
+    uni, counts = np.unique(label_list, return_counts=True)
+    plt.figure(figsize=size)
     plt.bar(uni, counts)
     plt.xticks(rotation=90)
-    plt.savefig(out_path)
-    plt.show()
+    plt.title(title)
+    plt.tight_layout()
+    if out_path is not None:
+        plt.savefig(out_path)
+    else:
+        plt.show()
 
 
 def plot_confusion_matrix(labels, pred, col_names=None, normalize="sensitivity", out_path=None):
@@ -67,7 +72,7 @@ def plot_confusion_matrix(labels, pred, col_names=None, normalize="sensitivity",
         bottom=False,  # ticks along the bottom edge are off
         top=False,  # ticks along the top edge are off
         labelbottom=True,
-        rotation=0,
+        rotation=90,
     )
     plt.xlabel("$\\bf{Predictions}$", fontsize=20)
     plt.ylabel("$\\bf{Ground\ truth}$", fontsize=20)
@@ -78,7 +83,7 @@ def plot_confusion_matrix(labels, pred, col_names=None, normalize="sensitivity",
         plt.savefig(out_path)
 
 
-def main_plot(result_df, out_path):
+def main_plot(result_df, out_path=None):
     result_df.sort_values(["obfuscation", "method"], inplace=True)
     data_feats = result_df[result_df["method"] == "all features"]
     data_nearest = result_df[result_df["method"] == "spatial join"]
@@ -101,15 +106,18 @@ def main_plot(result_df, out_path):
         linestyle="--",
         c="grey",
     )
-    plt.xlabel("Obfuscation (in meters)")
+    plt.xlabel("Obfuscation radius (in meters)")
     plt.ylabel("Accuracy")
     # plt.xticks(np.arange(len(data_nearest)), data_nearest["obfuscation"])
     plt.legend()
     plt.tight_layout()
-    plt.savefig(os.path.join(out_path, "main_result_plot.png"))
+    if out_path is not None:
+        plt.savefig(os.path.join(out_path, "main_result_plot.png"))
+    else:
+        plt.show()
 
 
-def user_mae_plot(result_df, out_path, metric="User-wise MAE"):
+def user_mae_plot(result_df, out_path=None, metric="User-wise MAE"):
     metric_probs = metric + " probs"
     user_results = result_df.dropna(subset=[metric_probs])
     user_results = user_results.sort_values(["obfuscation", "method"])
@@ -153,7 +161,7 @@ def user_mae_plot(result_df, out_path, metric="User-wise MAE"):
                 )
             plot_lines_inner.append(l1)
         plot_lines.append(plot_lines_inner)
-    plt.xlabel("Obfuscation (in meters)")
+    plt.xlabel("Obfuscation radius (in meters)")
     label_mapping = {
         "User-wise MAE": "User-wise distribution MAE",
         "Profile identification": "User identification (top-5 accuracy)",
@@ -167,11 +175,19 @@ def user_mae_plot(result_df, out_path, metric="User-wise MAE"):
         plt.legend([l[0] for l in plot_lines], feat_labels, loc="lower right")
     plt.gca().add_artist(legend1)
     plt.tight_layout()
-    plt.savefig(os.path.join(out_path, f"user_performance_({metric}).png"))
+    if out_path is not None:
+        plt.savefig(os.path.join(out_path, f"user_performance_({metric}).png"))
+    else:
+        plt.show()
 
 
 def plot_configurations(
-    all_results, compare_col="split", compare_second_level="poi_data", eval_col="Accuracy", agg_method="mean"
+    all_results,
+    compare_col="split",
+    compare_second_level="poi_data",
+    eval_col="Accuracy",
+    agg_method="mean",
+    out_path="figures",
 ):
     cols_avail = ["method", "model", "poi_data", "city", "split"]
     filter_columns = {"split": "spatial", "model": "xgb"}  # "poi_data": "foursquare",
@@ -238,7 +254,7 @@ def plot_configurations(
         title=compare_second_level.replace("_", " "),
     )
     plt.ylabel(eval_col)
-    plt.xlabel("Location masking (in m)")
+    plt.xlabel("Obfuscation radius (in m)")
     plt.legend(
         [l[0] for l in plot_lines],
         results_filtered[compare_col].unique(),
@@ -248,8 +264,10 @@ def plot_configurations(
     plt.gca().add_artist(legend1)
     filtered_keys = "_".join(list(filter_columns.values()))
     plt.tight_layout()
-    plt.savefig(f"../figures/{compare_col}_{compare_second_level}_{eval_col}_({filtered_keys}).png")
-    plt.show()
+    if out_path is not None:
+        plt.savefig(os.path.join(out_path, f"{compare_col}_{compare_second_level}_{eval_col}_({filtered_keys}).png"))
+    else:
+        plt.show()
 
 
 if __name__ == "__main__":
