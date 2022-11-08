@@ -3,6 +3,7 @@ import pickle
 import os
 import matplotlib.pyplot as plt
 import seaborn as sns
+import argparse
 
 plt.rcParams.update({"font.size": 20})
 import pandas as pd
@@ -66,9 +67,9 @@ def baseline_random(results):
     return results
 
 
-def plot_results_for_one(base_path="outputs/xgb_foursquare_newyorkcity_spatial_1"):
+def plot_results_for_one(base_path, out_path):
     # INPUT: single configuration, all csv files for this configuration
-    out_path = base_path
+
     # combine results
     result_dict = load_results(base_path)
     result_df = results_to_dataframe(result_dict)
@@ -100,7 +101,7 @@ def poi_density_analysis(result_csv_path, data_path="data", out_path="figures"):
     plt.savefig(os.path.join(out_path, "kde_poi_density.png"))
 
 
-def load_save_all_results(base_path="outputs/cluster_runs_all"):
+def load_save_all_results(base_path="outputs/cluster_runs_all", out_path="outputs"):
     results = []
     info_columns = ["model", "poi_data", "city", "split"]
     for subdir in os.listdir(base_path):
@@ -113,27 +114,33 @@ def load_save_all_results(base_path="outputs/cluster_runs_all"):
             result_df[col] = infos[i]
         results.append(result_df)
     all_results = pd.concat(results)
-    all_results.to_csv("outputs/pooled_results.csv")
+    all_results.to_csv(os.path.join(out_path, "pooled_results.csv"))
 
 
 if __name__ == "__main__":
-    # # 1) Multiple runs
-    # load_save_all_results()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-i", "--inp_path", type=str, required=True)
+    parser.add_argument("-o", "--out_path", type=str, default="outputs")
+    parser.add_argument("-m", "--mode", default="result_table", type=str)
+    args = parser.parse_args()
 
-    # # 2) One run (but all files of that run)
-    plot_results_for_one(base_path="outputs/best_runs/xgb_foursquare_newyorkcity_spatial_1")
+    os.makedirs(args.out_path, exist_ok=True)
 
-    # # 3) Single files
-    # poi_density_analysis(
-    #     "outputs/cluster_runs_all/xgb_foursquare_newyorkcity_spatial_1/predictions_all_features_100.csv"
-    # )
-
-    # # Confusion matrix for one
-    # base_path = "outputs/cluster_runs_all/xgb_osm_newyorkcity_spatial_1"
-    # results_one = pd.read_csv(os.path.join(base_path, "predictions_all_features_0.csv"))
-    # plot_confusion_matrix(
-    #     results_one["ground_truth"],
-    #     results_one["prediction"],
-    #     col_names=np.unique(results_one["label"]),
-    #     out_path=os.path.join(base_path, "confusion_matrix.png"),
-    # )
+    if args.mode == "result_table":
+        # 1) Summarize multiple runs in different configurations in one table
+        load_save_all_results(args.inp_path, args.out_path)
+    elif args.mode == "main_plot":
+        # 2) One run (but all files of that run)
+        plot_results_for_one(args.inp_path, args.out_path)
+    elif args.mode == "single_file":
+        # 3) Single files
+        # density analysis for one
+        poi_density_analysis(args.inp_path, out_path=args.out_path)
+        # Confusion matrix for one
+        results_one = pd.read_csv(args.inp_path)
+        plot_confusion_matrix(
+            results_one["ground_truth"],
+            results_one["prediction"],
+            col_names=np.unique(results_one["label"]),
+            out_path=os.path.join(args.out_path, "confusion_matrix.png"),
+        )

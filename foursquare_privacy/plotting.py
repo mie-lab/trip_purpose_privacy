@@ -92,6 +92,9 @@ def main_plot(result_df, out_path=None):
 
     plt.figure(figsize=(10, 6))
     plt.plot(data_feats["obfuscation"], data_feats["Accuracy"], label="All features")
+    if "spatial features" in result_df["method"].unique():
+        data_only_spatial = result_df[result_df["method"] == "spatial features"]
+        plt.plot(data_only_spatial["obfuscation"], data_only_spatial["Accuracy"], label="Spatial features")
     plt.plot(data_nearest["obfuscation"], data_nearest["Accuracy"], label="Spatial join")
     plt.plot(
         data_nearest["obfuscation"],
@@ -130,14 +133,20 @@ def user_mae_plot(result_df, out_path=None, metric="User-wise MAE"):
     random_mae[metric] = user_results.set_index("method").loc["random"][metric]
     random_mae[metric_probs] = user_results.set_index("method").loc["random"][metric_probs]
 
-    user_results = user_results.dropna(subset=["obfuscation"])
+    if "spatial features" in user_results["method"].unique():
+        user_results = user_results[user_results["method"] == "spatial features"]
+        feature_label = "Spatial features"
+    else:
+        user_results = user_results[user_results["method"] == "all features"]
+        feature_label = "All features"
+
     x_obfuscation = user_results["obfuscation"].unique()
 
     plt.figure(figsize=(10, 6))
     plot_lines = []
     styles = ["-", "--", "-."]
     cols = ["blue", "green", "grey"]
-    feat_labels = ["All features", "Temporal features", "Random"]
+    feat_labels = [feature_label, "Temporal features", "Random"]
     mode_labels = ["Hard labels", "Soft labels"]
     for i, feat_type in enumerate([user_results, timefeats_mae, random_mae]):
         plot_lines_inner = []
