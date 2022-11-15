@@ -33,8 +33,9 @@ def sample_split(data, kfold=5):
     folds[-1].extend(rands[(k + 1) * fold_len :])
     return folds
 
+
 def user_or_venue_split(data, by="user_id", kfold=5):
-    assert by in ["user", "venue", "spatial"], "Fold_mode argument must be one of spatial, venue or user")
+    assert by in ["user", "venue", "spatial"], "Fold_mode argument must be one of spatial, venue or user"
     if by == "spatial":
         return spatial_split(data, kfold=kfold)
     by = by + "_id"

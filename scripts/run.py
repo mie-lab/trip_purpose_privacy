@@ -1,3 +1,4 @@
+import pickle
 import json
 import os
 import pandas as pd
@@ -9,8 +10,8 @@ from foursquare_privacy.utils.io import read_gdf_csv, read_poi_geojson
 from foursquare_privacy.models.xgb import XGBWrapper
 from foursquare_privacy.models.mlp import MLPWrapper
 from foursquare_privacy.utils.user_distribution import get_user_dist_mae
-from foursquare_privacy.utils.spatial_folds import spatial_split, venue_split
-from foursquare_privacy.add_poi import POI_processor
+from foursquare_privacy.utils.spatial_folds import user_or_venue_split
+from foursquare_privacy.add_poi import POI_processor, get_embedding
 from foursquare_privacy.location_masking import LocationMasker
 
 model_dict = {"xgb": {"model_class": XGBWrapper, "config": {}}, "mlp": {"model_class": MLPWrapper, "config": {}}}
@@ -31,8 +32,7 @@ def cross_validation(dataset, folds, models=[], save_name=None, load_name=None, 
     label_mapping = {u: i for i, u in enumerate(uni_labels)}
     labels = dataset["label"].map(label_mapping)
 
-    result_df = dataset[["user_id", "venue_id", "label"]].copy()
-    result_df["ground_truth"] = labels.astype(int)
+    result_df = dataset[["user_id", "venue_id", "label", "ground_truth"]].copy()
     proba_columns = [f"proba_{u}" for u in uni_labels]
     result_df["prediction"] = -1
 
@@ -73,7 +73,7 @@ def cross_validation(dataset, folds, models=[], save_name=None, load_name=None, 
     return models, result_df
 
 
-def print_results(result_df, name):
+def print_results(result_df, name, out_dir):
     acc = accuracy_score(result_df["ground_truth"], result_df["prediction"])
     bal_acc = balanced_accuracy_score(result_df["ground_truth"], result_df["prediction"])
     user_mae = np.mean(get_user_dist_mae(result_df))
@@ -91,12 +91,16 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--out_dir", default=os.path.join("outputs", "test"), type=str)
     parser.add_argument("-p", "--poi_data", default="foursquare", type=str)
     parser.add_argument("-m", "--model", default="xgb", type=str)
-    parser.add_argument("-f", "--fold_mode", default="spatial", type=str)
-    parser.add_argument("-k", "--kfold", default=4, type=int)
+    parser.add_argument(
+        "-x", "--embed_model_path", default="../space2vec/spacegraph/model_dir/global_mydata_32/", type=str
+    )
+    parser.add_argument("-f", "--fold_mode", default="user", type=str)
+    parser.add_argument("-k", "--kfold", default=5, type=int)
     parser.add_argument("-b", "--buffer_factor", default=1.5, type=float)
     # minimum buffer around the location, aside from the buffer factor
     parser.add_argument("--min_buffer", default=100, type=float)
     parser.add_argument("-l", "--lda", action="store_true")
+    parser.add_argument("-e", "--embed", action="store_true")
     args = parser.parse_args()
 
     city = args.city
@@ -116,6 +120,11 @@ if __name__ == "__main__":
 
     # load data
     data_raw = read_gdf_csv(os.path.join(args.data_path, f"checkin_{city}_features.csv"))
+    # convert to id arr
+    uni_labels = np.unique(data_raw["label"])
+    label_mapping = {elem: i for i, elem in enumerate(uni_labels)}
+    data_raw["ground_truth"] = data_raw["label"].map(label_mapping)
+
     if args.poi_data == "both":
         pois_1 = read_poi_geojson(os.path.join(args.data_path, f"pois_{city}_foursquare.geojson"))
         pois_2 = read_poi_geojson(os.path.join(args.data_path, f"pois_{city}_osm.geojson"))
@@ -127,22 +136,17 @@ if __name__ == "__main__":
 
     # Split data
     np.random.seed(42)
-    if args.fold_mode == "spatial":
-        folds = spatial_split(data_raw, args.kfold)
-    elif args.fold_mode == "venue":
-        folds = venue_split(data_raw, args.kfold)
-    else:
-        raise ValueError("fold_mode argument must be one of spatial, venue")
+    folds = user_or_venue_split(data_raw, by=args.fold_mode, kfold=args.kfold)
     # print("Fold lengths", [len(f) for f in folds])
 
     # 1) USER-FEATURES: check the performance with solely the user features
     _, results_only_user = cross_validation(data_raw, folds)
-    print_results(results_only_user, "temporal_features")
+    print_results(results_only_user, "temporal_features", out_dir)
 
     temporal_feats = [col for col in data_raw.columns if col.startswith("feat")]
 
     # obfuscate coordinates
-    for masking in [25, 50, 100, 200, 400, 800, 1200, 1600]:
+    for masking in [0, 25, 50, 100, 200, 400, 800, 1200, 1600]:
         buffering = max(args.buffer_factor * masking, args.min_buffer)
         print(f"-------- Masking {masking} ---------")
         if masking == 0:
@@ -159,9 +163,8 @@ if __name__ == "__main__":
 
         # 2) CLOSEST_POI - Use simply the nearest poi label
         spatial_joined = data.sjoin_nearest(pois, how="left")  # , distance_col="distance")
-        spatial_joined["ground_truth"] = spatial_joined["label"]
-        spatial_joined["prediction"] = spatial_joined["poi_my_label"]
-        print_results(spatial_joined, f"spatial_join_{masking}")
+        spatial_joined["prediction"] = spatial_joined["poi_my_label"].map(label_mapping)
+        print_results(spatial_joined, f"spatial_join_{masking}", out_dir)
 
         # get poi features
         poi_process = POI_processor(data, pois)
@@ -177,16 +180,20 @@ if __name__ == "__main__":
         dataset = data.merge(poi_features, left_on=["latitude", "longitude"], right_index=True, how="left")
         print("Percentage of rows with at least one NaN", dataset.isna().any(axis=1).sum() / len(dataset))
         dataset = dataset.fillna(0)
+
+        if args.embed:
+            poi_pointset_path = os.path.join(args.data_path, f"space2vec_{args.poi_data}_{args.city}")
+            dataset = get_embedding(data, poi_pointset_path, args.embed_model_path, 10)
         # print("Merge user featuers and POI features", len(poi_features), len(data), len(dataset))
         # if any(pd.isna(dataset)):
         #     print("Attention: NaNs in data", sum(pd.isna(dataset)))
 
         _, result_df = cross_validation(dataset, folds, models=[], save_feature_importance=True)
-        print_results(result_df, f"all_features_{masking}")
+        print_results(result_df, f"all_features_{masking}", out_dir)
 
         dataset_spatial = dataset.drop(temporal_feats, axis=1)
         _, result_df = cross_validation(dataset_spatial, folds, models=[])
-        print_results(result_df, f"spatial_features_{masking}")
+        print_results(result_df, f"spatial_features_{masking}", out_dir)
 
         # # CODE to train only on non-obfuscated and test on others
         # if masking == 0:
