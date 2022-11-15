@@ -23,8 +23,7 @@ def spatial_split(data, kfold=9):
     return folds
 
 
-def venue_split(data, kfold=5):
-    assert data["venue_id"].nunique() == len(data), "Index must correspond to venue_id"
+def sample_split(data, kfold=5):
     rands = np.random.permutation(data.index)
     folds = []
     fold_len = len(rands) // kfold
@@ -34,3 +33,18 @@ def venue_split(data, kfold=5):
     folds[-1].extend(rands[(k + 1) * fold_len :])
     return folds
 
+def user_or_venue_split(data, by="user_id", kfold=5):
+    assert by in ["user", "venue", "spatial"], "Fold_mode argument must be one of spatial, venue or user")
+    if by == "spatial":
+        return spatial_split(data, kfold=kfold)
+    by = by + "_id"
+    uni_venue_ids = np.unique(data[by])
+    rands = np.random.permutation(len(uni_venue_ids))
+    folds = []
+    fold_len = len(rands) // kfold
+    for k in range(kfold):
+        fold_venues = uni_venue_ids[rands[k * fold_len : (k + 1) * fold_len]]
+        folds.append(list(data[data[by].isin(fold_venues)].index))
+    last_venues = uni_venue_ids[rands[(k + 1) * fold_len :]]
+    folds[-1].extend(list(data[data[by].isin(last_venues)].index))
+    return folds

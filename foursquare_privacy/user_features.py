@@ -57,15 +57,20 @@ def merge_repeated_checkins(data, max_hours=1):
     data = data.sort_values(["user_id", "local_time"])
     data["prev_check_in_time"] = data["local_time"].shift(1)
     data["prev_venue_id"] = data["venue_id"].shift(1)
+    data["prev_user_id"] = data["user_id"].shift(1)
     data["time_diff"] = (data["local_time"] - data["prev_check_in_time"]).dt.total_seconds() / 3600
     len_data_prev = len(data)
-    data = data[(data["venue_id"] != data["prev_venue_id"]) | (data["time_diff"] > max_hours)]
+    data = data[
+        (data["venue_id"] != data["prev_venue_id"])
+        | (data["user_id"] != data["prev_user_id"])
+        | (data["time_diff"] > max_hours)
+    ]
     print(f"Ratio of repeated entries of venues within {max_hours} hours (deleted):", 1 - len(data) / len_data_prev)
     return data.drop(["prev_check_in_time", "prev_venue_id", "time_diff"], axis=1)
 
 
 def get_duration_feature(inp_data):
-    data = inp_data.copy()
+    data = inp_data.sort_values(["user_id", "local_time"])
     # problem: now we have the time diff to the previous one. We need that for merging two entries (delete second check in)
     # however, for computing the duration we want to have the time diff to the next one. so we roll again
     if "finished_at" not in data.columns:

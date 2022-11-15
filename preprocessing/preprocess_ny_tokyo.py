@@ -72,13 +72,15 @@ for city in ["NYC", "TKY"]:
     # get label
     df["label"] = df["category"].map(poi_taxonomy)
 
-    # drop the ones that have more than one label at the same location
-    prev_len = len(df)
-    grouped_by_geom = df.reset_index().groupby(["latitude", "longitude"]).agg({"label": "nunique", "id": list})
-    id_lists_with_several_labels = grouped_by_geom[grouped_by_geom["label"] > 1]["id"].values
-    id_lists_with_several_labels = [id_ for id_list in id_lists_with_several_labels for id_ in id_list]  # flat list
-    df = df[~df.index.isin(id_lists_with_several_labels)]
-    print(f"Removed {prev_len - len(df)} records because the venue had multiple labels")
+    grouped_by_geom = df.reset_index().groupby(["latitude", "longitude"]).agg({"label": "nunique"})
+    print(sum(grouped_by_geom["label"] > 1) / len(grouped_by_geom), "percent of the venues have multiple labels")
+    # # Previously: drop the ones that have more than one label at the same location
+    # prev_len = len(df)
+    # grouped_by_geom = df.reset_index().groupby(["latitude", "longitude"]).agg({"label": "nunique", "id": list})
+    # id_lists_with_several_labels = grouped_by_geom[grouped_by_geom["label"] > 1]["id"].values
+    # id_lists_with_several_labels = [id_ for id_list in id_lists_with_several_labels for id_ in id_list]  # flat list
+    # df = df[~df.index.isin(id_lists_with_several_labels)]
+    # print(f"Removed {(prev_len - len(df)) / prev_len} records because the venue had multiple labels")
 
     # to gdf
     gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df["longitude"], df["latitude"]), crs="epsg:4326")

@@ -5,8 +5,8 @@ import pickle
 import numpy as np
 from sklearn.metrics import pairwise_distances
 from collections import defaultdict
-from sklearn.neighbors import BallTree
 
+from foursquare_privacy.add_poi import get_nearest
 from foursquare_privacy.utils.io import read_poi_geojson
 
 # sliding window approach:
@@ -65,16 +65,6 @@ def old_version_get_nearest():
             counter += 1
 
 
-def get_nearest(src_points, candidates, k_neighbors=10, remove_first=True):
-    """Find nearest neighbors for all source points from a set of candidate points"""
-    # Create tree from the candidate points
-    tree = BallTree(candidates, leaf_size=15, metric="euclidean")
-    # Find closest points and distances
-    distances, indices = tree.query(src_points, k=k_neighbors + int(remove_first))
-    # Return indices and distances
-    return (indices[:, remove_first:], distances[:, remove_first:])  # do not return trivial first element
-
-
 def get_ordered_unique(arr):
     set_new, elems_new = set(), []
     for elem in arr:
@@ -88,15 +78,17 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--data_path", default="data", type=str)
     parser.add_argument("-c", "--city", default="newyorkcity", type=str)
+    parser.add_argument("-p", "--poi_data", default="foursquare", type=str)
     parser.add_argument("-n", "--neighbors", default=10, type=int)
-    parser.add_argument("-o", "--out_path", default="../space2vec/spacegraph/data_collection/my_data/", type=str)
+    parser.add_argument("-o", "--out_path", default="data", type=str)
     args = parser.parse_args()
 
-    out_path = args.out_path
+    out_path = os.path.join(args.out_path, f"space2vec_{args.poi_data}_{args.city}")
+    os.makedirs(out_path, exist_ok=True)
     nr_neighbors = args.neighbors
 
     # LOAD data
-    poi = read_poi_geojson(os.path.join(args.data_path, f"pois_{args.city}_foursquare.geojson"))
+    poi = read_poi_geojson(os.path.join(args.data_path, f"pois_{args.city}_{args.poi_data}.geojson"))
     mapping_prev_ids = {i: int(old_id) for i, old_id in enumerate(poi["id"].values)}
     with open(os.path.join(out_path, "poi_id_mapping.json"), "w") as outfile:
         json.dump(mapping_prev_ids, outfile)
@@ -106,7 +98,7 @@ if __name__ == "__main__":
 
     # PART 1: POI types
     # add the main categories:
-    main_types = poi["poi_my_label"].unique()
+    main_types = np.unique(poi["poi_my_label"])
     start_mapping = len(main_types)
     main_type_mapping = {elem: i for i, elem in enumerate(main_types)}
     sub_types = [t for t in poi["poi_type"].unique() if t not in main_types]
@@ -152,7 +144,7 @@ if __name__ == "__main__":
 
     # PART 3: sample the spatially closest
     coord_arr = np.swapaxes(np.vstack([poi["geometry"].x.values, poi["geometry"].y.values]), 1, 0)
-    closest, dist = get_nearest(coord_arr, coord_arr, k_neighbors=nr_neighbors)
+    closest, distance_of_closest = get_nearest(coord_arr, coord_arr, k_neighbors=nr_neighbors)
     print("Finished positive sampling")
 
     # convert index
@@ -169,7 +161,7 @@ if __name__ == "__main__":
         negative_sampled = list(np.random.choice(leftover, nr_neighbors))
 
         mode = poi.loc[elem_id, "split"]
-        all_tuples.append((elem_id, tuple(positive_sampled), mode, negative_sampled))
+        all_tuples.append((elem_id, tuple(positive_sampled), mode, negative_sampled, distance_of_closest[counter]))
     print("Finisher negative sampling")
 
     for mode in ["training", "validation", "test"]:

@@ -22,23 +22,20 @@ if __name__ == "__main__":
         # group by longitude and latitude to clean up the venue ID
         if correct_venue_id:
             print("Replacing venue ID by long-lat grouping")
-            actual_venue = data.groupby(["user_id", "latitude", "longitude"]).agg(
-                {"label": "first", "category": "first", "geometry": "first"}
-            )
-            actual_venue["venue_id"] = np.arange(len(actual_venue))
+            actual_venue = data.groupby(["latitude", "longitude"]).agg({"venue_id": "first"})
             # merge with data again to have everything as input for the user features
-            data = data.drop(["venue_id", "label", "category"], axis=1, errors="ignore").merge(
-                actual_venue, left_on=["user_id", "latitude", "longitude"], right_index=True, how="left"
+            data = (
+                data.drop(["venue_id"], axis=1, errors="ignore")
+                .merge(actual_venue, left_on=["latitude", "longitude"], right_index=True, how="left")
+                .reset_index()
             )
-            actual_venue = actual_venue.reset_index().set_index(["user_id", "venue_id"])
-        else:
-            actual_venue = data.groupby(["user_id", "venue_id"]).agg(
-                {"label": "first", "category": "first", "geometry": "first"}
-            )
+        grouped_visits_user_venue = data.groupby(["user_id", "venue_id"]).agg(
+            {"label": "first", "category": "first", "geometry": "first"}
+        )
 
         # get features and merge them
         nr_visits = get_visit_count_features(data)
-        user_venue_data = actual_venue.merge(nr_visits, left_index=True, right_index=True, how="inner")
+        user_venue_data = grouped_visits_user_venue.merge(nr_visits, left_index=True, right_index=True, how="inner")
         time_feats = time_features(data)
         user_venue_data = user_venue_data.merge(time_feats, left_index=True, right_index=True, how="inner")
         print("merged time and visit count features", len(nr_visits), len(time_feats), len(user_venue_data))
