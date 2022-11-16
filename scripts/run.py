@@ -111,7 +111,8 @@ if __name__ == "__main__":
 
     out_dir_base = args.out_dir
     os.makedirs(out_dir_base, exist_ok=True)
-    out_name = f"{args.model}_{args.poi_data}_{args.city}_{args.fold_mode}"
+    further_out_name = f"_{args.embed}_{args.lda}_{args.inbuffer}_{args.closestk}_{args.xgbdepth}_{args.kfold}"
+    out_name = f"{args.model}_{args.poi_data}_{args.city}_{args.fold_mode}" + further_out_name
     out_dir = os.path.join(out_dir_base, out_name)
     print(out_dir_base, out_dir)
     if os.path.exists(out_dir):
