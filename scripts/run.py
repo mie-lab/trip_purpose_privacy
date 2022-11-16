@@ -183,7 +183,7 @@ if __name__ == "__main__":
 
         if args.embed:
             poi_pointset_path = os.path.join(args.data_path, f"space2vec_{args.poi_data}_{args.city}")
-            dataset = get_embedding(data, poi_pointset_path, args.embed_model_path, 10)
+            dataset = get_embedding(dataset, poi_pointset_path, args.embed_model_path, 10)
         # print("Merge user featuers and POI features", len(poi_features), len(data), len(dataset))
         # if any(pd.isna(dataset)):
         #     print("Attention: NaNs in data", sum(pd.isna(dataset)))
@@ -200,6 +200,8 @@ if __name__ == "__main__":
         #     models, result_df = cross_validation(dataset, folds, models)
         # else:
         #     _, result_df = cross_validation(dataset, folds, models)
+        # print_results(result_df, f"all_features_{masking}", out_dir)
+
 
     with open(os.path.join(out_dir, "results.json"), "w") as outfile:
         json.dump(results_dict, outfile)
