@@ -38,6 +38,7 @@ def user_or_venue_split(data, by="user_id", kfold=5):
     assert by in ["user", "venue", "spatial"], "Fold_mode argument must be one of spatial, venue or user"
     if by == "spatial":
         return spatial_split(data, kfold=kfold)
+    print("Splitting data by", by)
     by = by + "_id"
     uni_venue_ids = np.unique(data[by])
     rands = np.random.permutation(len(uni_venue_ids))
