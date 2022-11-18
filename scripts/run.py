@@ -148,13 +148,19 @@ if __name__ == "__main__":
     # print("Fold lengths", [len(f) for f in folds])
 
     # 1) USER-FEATURES: check the performance with solely the user features
-    _, results_only_user = cross_validation(data_raw, folds)
-    print_results(results_only_user, "temporal_features", out_dir)
+    if not os.path.exists(os.path.join(out_dir, "predictions_temporal_features.csv")):
+        _, results_only_user = cross_validation(data_raw, folds)
+        print_results(results_only_user, "temporal_features", out_dir)
+    else:
+        print("Temporal features already exist, not running again")
 
     temporal_feats = [col for col in data_raw.columns if col.startswith("feat")]
 
     # obfuscate coordinates
     for masking in [0, 25, 50, 100, 200, 400, 800, 1200]:
+        if os.path.exists(os.path.join(out_dir, f"predictions_spatial_features_{masking}.csv")):
+            print(f"Run with masking {masking} already exists, skip")
+            continue
         buffering = max(args.buffer_factor * masking, args.min_buffer)
         print(f"-------- Masking {masking} ---------")
         if masking == 0:
