@@ -119,6 +119,8 @@ if __name__ == "__main__":
         print("Warning: Output directory already exists, may be overwriting files")
     os.makedirs(out_dir, exist_ok=True)
 
+    assert any([args.embed, args.inbuffer, args.closestk, args.lda]), "must define some spatial representation"
+
     # get model
     ModelClass = model_dict[args.model]["model_class"]
     model_config = model_dict[args.model]["config"]
@@ -146,14 +148,13 @@ if __name__ == "__main__":
     # print("Fold lengths", [len(f) for f in folds])
 
     # 1) USER-FEATURES: check the performance with solely the user features
-    # _, results_only_user = cross_validation(data_raw, folds)
-    # print_results(results_only_user, "temporal_features", out_dir)
+    _, results_only_user = cross_validation(data_raw, folds)
+    print_results(results_only_user, "temporal_features", out_dir)
 
     temporal_feats = [col for col in data_raw.columns if col.startswith("feat")]
-    data_raw.drop(temporal_feats, inplace=True, axis=1)
 
     # obfuscate coordinates
-    for masking in [100, 200]:
+    for masking in [0, 25, 50, 100, 200, 400, 800, 1200]:
         buffering = max(args.buffer_factor * masking, args.min_buffer)
         print(f"-------- Masking {masking} ---------")
         if masking == 0:
@@ -169,9 +170,9 @@ if __name__ == "__main__":
             # )
 
         # 2) CLOSEST_POI - Use simply the nearest poi label
-        # spatial_joined = data.sjoin_nearest(pois, how="left")  # , distance_col="distance")
-        # spatial_joined["prediction"] = spatial_joined["poi_my_label"].map(label_mapping)
-        # print_results(spatial_joined, f"spatial_join_{masking}", out_dir)
+        spatial_joined = data.sjoin_nearest(pois, how="left")  # , distance_col="distance")
+        spatial_joined["prediction"] = spatial_joined["poi_my_label"].map(label_mapping)
+        print_results(spatial_joined, f"spatial_join_{masking}", out_dir)
 
         dataset = data.copy()
 
@@ -202,11 +203,11 @@ if __name__ == "__main__":
         print("Percentage of rows with at least one NaN", dataset.isna().any(axis=1).sum() / len(dataset))
         dataset = dataset.fillna(0)
 
-        # _, result_df = cross_validation(dataset, folds, models=[], save_feature_importance=True)
-        # print_results(result_df, f"all_features_{masking}", out_dir)
+        _, result_df = cross_validation(dataset, folds, models=[], save_feature_importance=True)
+        print_results(result_df, f"all_features_{masking}", out_dir)
 
-        # dataset_spatial = dataset.drop(temporal_feats, axis=1)
-        _, result_df = cross_validation(dataset, folds, models=[])
+        dataset_spatial = dataset.drop(temporal_feats, axis=1)
+        _, result_df = cross_validation(dataset_spatial, folds, models=[])
         print_results(result_df, f"spatial_features_{masking}", out_dir)
 
         # # CODE to train only on non-obfuscated and test on others
