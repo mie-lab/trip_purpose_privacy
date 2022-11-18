@@ -198,8 +198,6 @@ if __name__ == "__main__":
             poi_pointset_path = os.path.join(args.data_path, f"space2vec_{args.poi_data}_{args.city}")
             dataset = get_embedding(dataset, poi_pointset_path, embed_model_path, 10)
 
-        print("Training on features", dataset.columns)
-
         print("Percentage of rows with at least one NaN", dataset.isna().any(axis=1).sum() / len(dataset))
         dataset = dataset.fillna(0)
 
