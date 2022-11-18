@@ -173,15 +173,19 @@ def get_embedding(data, poi_pointset_path, model_dir, neighbors=10):
     return data
 
 
-def get_closest_poi_feats(data, poi):
+def get_closest_poi_feats(data, poi, closest_k=20, nr_classes=12):
     data_coord_arr = np.swapaxes(np.vstack([data.geometry.x.values, data.geometry.y.values]), 1, 0)
     poi_coord_arr = np.swapaxes(np.vstack([poi.geometry.x.values, poi.geometry.y.values]), 1, 0)
     # spatial join: neares k points
-    closest_pois, distance_of_closest = get_nearest(data_coord_arr, poi_coord_arr, k_neighbors=10, remove_first=False)
+    closest_pois, distance_of_closest = get_nearest(
+        data_coord_arr, poi_coord_arr, k_neighbors=closest_k, remove_first=False
+    )
     all_labs = np.unique(poi["poi_my_label"].values)
     mapped_poi = poi["poi_my_label"].map({elem: i for i, elem in enumerate(all_labs)}).values
     labs_of_closest = np.array([mapped_poi[inds] for inds in closest_pois])
-    closest_count_feats = np.apply_along_axis(lambda x: np.bincount(x, minlength=12), axis=1, arr=labs_of_closest)
+    closest_count_feats = np.apply_along_axis(
+        lambda x: np.bincount(x, minlength=nr_classes), axis=1, arr=labs_of_closest
+    )
     # add count features
     feat_col_names = ["feat_countknearest_" + str(lab) for lab in all_labs]
     data[feat_col_names] = closest_count_feats

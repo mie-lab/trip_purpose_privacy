@@ -11,7 +11,7 @@ from foursquare_privacy.models.xgb import XGBWrapper
 from foursquare_privacy.models.mlp import MLPWrapper
 from foursquare_privacy.utils.user_distribution import get_user_dist_mae
 from foursquare_privacy.utils.spatial_folds import user_or_venue_split
-from foursquare_privacy.add_poi import POI_processor, get_embedding
+from foursquare_privacy.add_poi import POI_processor, get_embedding, get_closest_poi_feats
 from foursquare_privacy.location_masking import LocationMasker
 
 model_dict = {"xgb": {"model_class": XGBWrapper, "config": {}}, "mlp": {"model_class": MLPWrapper, "config": {}}}
@@ -92,31 +92,39 @@ if __name__ == "__main__":
     parser.add_argument("-p", "--poi_data", default="foursquare", type=str)
     parser.add_argument("-m", "--model", default="xgb", type=str)
     parser.add_argument(
-        "-x", "--embed_model_path", default="../space2vec/spacegraph/model_dir/global_mydata_32/", type=str
+        "-x", "--embed_model_path", default="../z_inactive_projects/space2vec/spacegraph/model_dir/", type=str
     )
     parser.add_argument("-f", "--fold_mode", default="user", type=str)
     parser.add_argument("-k", "--kfold", default=5, type=int)
     parser.add_argument("-b", "--buffer_factor", default=1.5, type=float)
     # minimum buffer around the location, aside from the buffer factor
     parser.add_argument("--min_buffer", default=100, type=float)
-    parser.add_argument("-l", "--lda", action="store_true")
-    parser.add_argument("-e", "--embed", action="store_true")
+    parser.add_argument("--lda", action="store_true")
+    parser.add_argument("--embed", action="store_true")
+    parser.add_argument("--closestk", action="store_true")
+    parser.add_argument("--inbuffer", action="store_true")
+    parser.add_argument("--xgbdepth", default=6, type=int)
     args = parser.parse_args()
 
     city = args.city
+    embed_model_path = os.path.join(args.embed_model_path, f"{args.poi_data}_{args.city}_16")
 
     out_dir_base = args.out_dir
     os.makedirs(out_dir_base, exist_ok=True)
-    out_name = f"{args.model}_{args.poi_data}_{args.city}_{args.fold_mode}"
+    further_out_name = f"_{args.embed}_{args.lda}_{args.inbuffer}_{args.closestk}_{args.xgbdepth}_{args.kfold}"
+    out_name = f"{args.model}_{args.poi_data}_{args.city}_{args.fold_mode}" + further_out_name
     out_dir = os.path.join(out_dir_base, out_name)
     print(out_dir_base, out_dir)
     if os.path.exists(out_dir):
         print("Warning: Output directory already exists, may be overwriting files")
     os.makedirs(out_dir, exist_ok=True)
 
+    assert any([args.embed, args.inbuffer, args.closestk, args.lda]), "must define some spatial representation"
+
     # get model
     ModelClass = model_dict[args.model]["model_class"]
     model_config = model_dict[args.model]["config"]
+    model_config["max_depth"] = args.xgbdepth
 
     # load data
     data_raw = read_gdf_csv(os.path.join(args.data_path, f"checkin_{city}_features.csv"))
@@ -146,7 +154,7 @@ if __name__ == "__main__":
     temporal_feats = [col for col in data_raw.columns if col.startswith("feat")]
 
     # obfuscate coordinates
-    for masking in [0, 25, 50, 100, 200, 400, 800, 1200, 1600]:
+    for masking in [0, 25, 50, 100, 200, 400, 800, 1200]:
         buffering = max(args.buffer_factor * masking, args.min_buffer)
         print(f"-------- Masking {masking} ---------")
         if masking == 0:
@@ -166,27 +174,32 @@ if __name__ == "__main__":
         spatial_joined["prediction"] = spatial_joined["poi_my_label"].map(label_mapping)
         print_results(spatial_joined, f"spatial_join_{masking}", out_dir)
 
-        # get poi features
-        poi_process = POI_processor(data, pois)
-        poi_process(buffer=buffering)
-        poi_features = poi_process.distance_count_features()
-        if args.lda:
-            lda_features = poi_process.lda_features()
-            assert len(poi_features) == len(lda_features)
-            poi_features = poi_features.merge(lda_features, left_index=True, right_index=True)
-        del poi_process
+        dataset = data.copy()
 
-        # version 2: together with user features
-        dataset = data.merge(poi_features, left_on=["latitude", "longitude"], right_index=True, how="left")
-        print("Percentage of rows with at least one NaN", dataset.isna().any(axis=1).sum() / len(dataset))
-        dataset = dataset.fillna(0)
+        if args.inbuffer:
+            # get poi features
+            poi_process = POI_processor(data, pois)
+            poi_process(buffer=buffering)
+            poi_features = poi_process.distance_count_features()
+            dataset = dataset.merge(poi_features, left_on=["latitude", "longitude"], right_index=True, how="left")
+            del poi_process
+
+        if args.lda:
+            poi_process = POI_processor(data, pois)
+            poi_process(buffer=buffering)
+            lda_features = poi_process.lda_features()
+            dataset = dataset.merge(lda_features, left_on=["latitude", "longitude"], right_index=True, how="left")
+            del poi_process
+
+        if args.closestk:
+            dataset = get_closest_poi_feats(dataset, pois)
 
         if args.embed:
             poi_pointset_path = os.path.join(args.data_path, f"space2vec_{args.poi_data}_{args.city}")
-            dataset = get_embedding(dataset, poi_pointset_path, args.embed_model_path, 10)
-        # print("Merge user featuers and POI features", len(poi_features), len(data), len(dataset))
-        # if any(pd.isna(dataset)):
-        #     print("Attention: NaNs in data", sum(pd.isna(dataset)))
+            dataset = get_embedding(dataset, poi_pointset_path, embed_model_path, 10)
+
+        print("Percentage of rows with at least one NaN", dataset.isna().any(axis=1).sum() / len(dataset))
+        dataset = dataset.fillna(0)
 
         _, result_df = cross_validation(dataset, folds, models=[], save_feature_importance=True)
         print_results(result_df, f"all_features_{masking}", out_dir)
@@ -201,7 +214,6 @@ if __name__ == "__main__":
         # else:
         #     _, result_df = cross_validation(dataset, folds, models)
         # print_results(result_df, f"all_features_{masking}", out_dir)
-
 
     with open(os.path.join(out_dir, "results.json"), "w") as outfile:
         json.dump(results_dict, outfile)
