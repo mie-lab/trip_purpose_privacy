@@ -3,6 +3,7 @@ import json
 import os
 import pandas as pd
 import argparse
+import warnings
 import numpy as np
 from sklearn.metrics import accuracy_score, balanced_accuracy_score
 
@@ -129,7 +130,7 @@ if __name__ == "__main__":
     # load data
     data_raw = read_gdf_csv(os.path.join(args.data_path, f"checkin_{city}_features.csv"))
     # convert to id arr
-    uni_labels = np.unique(data_raw["label"])
+    uni_labels, uni_counts = np.unique(data_raw["label"], return_counts=True)
     label_mapping = {elem: i for i, elem in enumerate(uni_labels)}
     data_raw["ground_truth"] = data_raw["label"].map(label_mapping)
 
@@ -178,6 +179,9 @@ if __name__ == "__main__":
         # 2) CLOSEST_POI - Use simply the nearest poi label
         spatial_joined = data.sjoin_nearest(pois, how="left")  # , distance_col="distance")
         spatial_joined["prediction"] = spatial_joined["poi_my_label"].map(label_mapping)
+        if any(spatial_joined["prediction"].isna()):
+            warnings.warn("NaNs in spatial join! --> filling with most often")
+            spatial_joined["prediction"] = spatial_joined["prediction"].fillna(np.argmax(uni_counts))
         print_results(spatial_joined, f"spatial_join_{masking}", out_dir)
 
         dataset = data.copy()
