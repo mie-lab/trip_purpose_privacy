@@ -103,7 +103,19 @@ def poi_density_analysis(result_csv_path, data_path="data", out_path="figures"):
 
 def load_save_all_results(base_path="outputs/cluster_runs_all", out_path="outputs"):
     results = []
-    info_columns = ["model", "poi_data", "city", "split", "embed", "lda", "inbuffer", "closestk", "xgbdepth", "kfold"]
+    info_columns = [
+        "model",
+        "poi_data",
+        "city",
+        "split",
+        "embed",
+        "lda",
+        "inbuffer",
+        "closestk",
+        "xgbdepth",
+        "kfold",
+        "poi_keep_ratio",
+    ]
     for subdir in os.listdir(base_path):
         if (
             subdir[0] == "."
@@ -116,6 +128,7 @@ def load_save_all_results(base_path="outputs/cluster_runs_all", out_path="output
         result_df = results_to_dataframe(result_dict)
         for i, col in enumerate(info_columns):
             if i >= len(infos):
+                result_df[col] = pd.NA
                 # older files don't have so many entries
                 break
             result_df[col] = infos[i]

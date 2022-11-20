@@ -104,6 +104,7 @@ if __name__ == "__main__":
     parser.add_argument("--embed", action="store_true")
     parser.add_argument("--closestk", action="store_true")
     parser.add_argument("--inbuffer", action="store_true")
+    parser.add_argument("--poi_keep_ratio", default=1, type=float)
     parser.add_argument("--xgbdepth", default=6, type=int)
     args = parser.parse_args()
 
@@ -112,7 +113,9 @@ if __name__ == "__main__":
 
     out_dir_base = args.out_dir
     os.makedirs(out_dir_base, exist_ok=True)
-    further_out_name = f"_{args.embed}_{args.lda}_{args.inbuffer}_{args.closestk}_{args.xgbdepth}_{args.kfold}"
+    further_out_name = (
+        f"_{args.embed}_{args.lda}_{args.inbuffer}_{args.closestk}_{args.xgbdepth}_{args.kfold}_{args.poi_keep_ratio}"
+    )
     out_name = f"{args.model}_{args.poi_data}_{args.city}_{args.fold_mode}" + further_out_name
     out_dir = os.path.join(out_dir_base, out_name)
     print(out_dir_base, out_dir)
@@ -142,6 +145,9 @@ if __name__ == "__main__":
     else:
         pois = read_poi_geojson(os.path.join(args.data_path, f"pois_{city}_{args.poi_data}.geojson"))
     print(f"Using {len(pois)} pois")
+    if args.poi_keep_ratio < 1:
+        pois = pois.sample(frac=args.poi_keep_ratio, replace=False, random_state=1)
+        print(f"Reduced POIs to {args.poi_keep_ratio}", len(pois))
 
     # Split data
     np.random.seed(42)
