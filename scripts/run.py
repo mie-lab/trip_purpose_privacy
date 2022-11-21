@@ -217,8 +217,9 @@ if __name__ == "__main__":
         print("Percentage of rows with at least one NaN", dataset.isna().any(axis=1).sum() / len(dataset))
         dataset = dataset.fillna(0)
 
-        _, result_df = cross_validation(dataset, folds, models=[], save_feature_importance=True)
-        print_results(result_df, f"all_features_{masking}", out_dir)
+        if not os.path.exists(os.path.join(out_dir, f"predictions_all_features_{masking}.csv")):
+            _, result_df = cross_validation(dataset, folds, models=[], save_feature_importance=True)
+            print_results(result_df, f"all_features_{masking}", out_dir)
 
         dataset_spatial = dataset.drop(temporal_feats, axis=1)
         _, result_df = cross_validation(dataset_spatial, folds, models=[])
