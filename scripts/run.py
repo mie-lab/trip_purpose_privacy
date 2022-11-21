@@ -145,8 +145,10 @@ if __name__ == "__main__":
     else:
         pois = read_poi_geojson(os.path.join(args.data_path, f"pois_{city}_{args.poi_data}.geojson"))
     print(f"Using {len(pois)} pois")
+    # remove POIs if we want to pretend that the POI quality is worse
+    keep_inds_iloc = np.random.permutation(len(pois))[: int(args.poi_keep_ratio * len(pois))]
     if args.poi_keep_ratio < 1:
-        pois = pois.sample(frac=args.poi_keep_ratio, replace=False, random_state=1)
+        pois = pois.iloc[keep_inds_iloc]
         print(f"Reduced POIs to {args.poi_keep_ratio}", len(pois))
 
     # Split data
@@ -212,7 +214,7 @@ if __name__ == "__main__":
 
         if args.embed:
             poi_pointset_path = os.path.join(args.data_path, f"space2vec_{args.poi_data}_{args.city}")
-            dataset = get_embedding(dataset, poi_pointset_path, embed_model_path, 10)
+            dataset = get_embedding(dataset, poi_pointset_path, embed_model_path, keep_inds_iloc, neighbors=10)
 
         print("Percentage of rows with at least one NaN", dataset.isna().any(axis=1).sum() / len(dataset))
         dataset = dataset.fillna(0)

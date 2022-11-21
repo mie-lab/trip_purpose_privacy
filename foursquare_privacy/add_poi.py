@@ -9,6 +9,8 @@ from gensim.models import TfidfModel, LdaModel
 from sklearn.neighbors import BallTree
 from spacegraph_codebase.test import embed_points
 
+from foursquare_privacy.utils.poi_to_pointset import get_poi_id_mapping, table_to_pointset
+
 
 def get_nearest(src_points, candidates, k_neighbors=10, remove_first=True):
     """Find nearest neighbors for all source points from a set of candidate points"""
@@ -127,10 +129,14 @@ class POI_processor:
         return lda_vec_df.set_index(["latitude", "longitude"])
 
 
-def get_embedding(data, poi_pointset_path, model_dir, neighbors=10):
+def get_embedding(data, poi_pointset_path, model_dir, poi_keep_inds, neighbors=10):
     # load pointset
     with open(os.path.join(poi_pointset_path, "pointset.pkl"), "rb") as infile:
         nr_types, poi_pointset = pickle.load(infile, encoding="latin-1")
+    print("length of keep inds and of point set", len(poi_keep_inds), len(poi_pointset))
+    if len(poi_keep_inds) < len(poi_pointset):
+        poi_pointset = [elem for elem in poi_pointset if elem[0] in poi_keep_inds]
+        print("new length of poi pointset after dropping POIs:", len(poi_pointset))
     poi_coord_arr = np.array([p[1] for p in poi_pointset])
     poi_id_array = np.array([p[0] for p in poi_pointset])
     # id arr
@@ -171,6 +177,33 @@ def get_embedding(data, poi_pointset_path, model_dir, neighbors=10):
     feat_embed_cols = [f"feat_embed_{i}" for i in range(embedded_coordinates.shape[1])]
     data[feat_embed_cols] = embedded_coordinates
     return data
+
+
+# def embedding_without_pointset():
+#     # PROBLEM: cannot use this because we have trained on one pointset and I'm not sure it can handle new IDs
+#     poi = pois_inp.copy()
+#     # make range IDs
+#     poi["id"] = np.arange(len(poi))
+#     poi.set_index("id", inplace=True)
+#     poi_id_array = np.array(list(poi.index))
+
+#     # get coordinates
+#     poi_coord_arr = np.swapaxes(np.vstack([poi.geometry.x.values, poi.geometry.y.values]), 1, 0)
+
+#     poi_id_mapping = get_poi_id_mapping(poi)
+#     # update table -> types to type ID
+#     poi["poi_type_id"] = poi["poi_type"].map(poi_id_mapping)
+#     poi["poi_my_label_id"] = poi["poi_my_label"].map(poi_id_mapping)
+#     poi["split"] = "training"
+
+#     # convert POIs to pointset representation
+#     poi_pointset = table_to_pointset(poi)
+#     nr_types = len(poi_id_mapping)
+
+#     # get IDs and coordinates for the check-ins
+#     checkin_id_arr = data.index.astype(int) + 1000000
+#     data_coord_arr = np.swapaxes(np.vstack([data.geometry.x.values, data.geometry.y.values]), 1, 0)
+#     # print("Coordinate array shape", data_coord_arr.shape)
 
 
 def get_closest_poi_feats(data, poi, closest_k=20, nr_classes=12):

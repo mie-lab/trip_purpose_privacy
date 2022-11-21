@@ -8,6 +8,7 @@ from collections import defaultdict
 
 from foursquare_privacy.add_poi import get_nearest
 from foursquare_privacy.utils.io import read_poi_geojson
+from foursquare_privacy.utils.poi_to_pointset import get_poi_id_mapping, table_to_pointset
 
 # sliding window approach:
 def overlapping_spatial_split(coord_arr, buffer=500, kfold=9):
@@ -98,12 +99,7 @@ if __name__ == "__main__":
 
     # PART 1: POI types
     # add the main categories:
-    main_types = np.unique(poi["poi_my_label"])
-    start_mapping = len(main_types)
-    main_type_mapping = {elem: i for i, elem in enumerate(main_types)}
-    sub_types = [t for t in poi["poi_type"].unique() if t not in main_types]
-    poi_id_mapping = {elem: i + start_mapping for i, elem in enumerate(sub_types)}
-    poi_id_mapping.update(main_type_mapping)
+    poi_id_mapping = get_poi_id_mapping(poi)
     # reversed
     id_poi_mapping = {str(i): elem for elem, i in poi_id_mapping.items()}
 
@@ -125,16 +121,9 @@ if __name__ == "__main__":
     split_label_arr[rand_perm[val_cutoff:]] = "test"
     poi["split"] = split_label_arr
     poi.loc[poi["split"] == "validati", "split"] = "validation"
+
     # convert table into tuple
-    my_poi_data = []
-    for elem_id, row in poi.iterrows():
-        this_tuple = (
-            elem_id,
-            (row["geometry"].x, row["geometry"].y),
-            (row["poi_my_label_id"], row["poi_type_id"]),
-            row["split"],
-        )
-        my_poi_data.append(this_tuple)
+    my_poi_data = table_to_pointset(poi)
     number_of_pois = len(id_poi_mapping)
 
     # Save the poi data with the categories
