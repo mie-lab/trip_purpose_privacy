@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 
 from sklearn.metrics import pairwise_distances
+from scipy.stats import rankdata
 
 
 def get_dist_per_user(results, use_probabilities=False):
@@ -58,3 +59,31 @@ def user_identification_accuracy(results, top_k=5, use_probabilities=False):
     top_k_acc = np.sum(np.any(bool_matrix_gt_in_top_k, axis=1)) / len(distance_matrix)
     # print(f"Top {top_k} accuracy: {round(top_k_acc, 4)} (Random: {round(top_k / len(distance_matrix), 3)})")
     return top_k_acc
+
+
+def privacy_loss(results, p=2, mode="rank", use_probabilities=True):
+    gt_user, pred_user = get_dist_per_user(results, use_probabilities)
+    gt_user = np.array(gt_user)
+    pred_user = np.array(pred_user)
+    # compute distances between users
+    distance_matrix = pairwise_distances(gt_user, pred_user)
+    if mode == "distance":
+        # OPTION 1: based on actual distance
+        if np.any(distance_matrix == 0):
+            distance_matrix = distance_matrix + 1e-7
+        prob_matrix = (1 / distance_matrix) ** p
+    elif mode == "rank":
+        # # OPTION 2: based on rank
+        argsort_matrix = rankdata(distance_matrix, axis=1)
+        prob_matrix = (1 / argsort_matrix) ** p
+    elif mode == "softmax":
+        prob_matrix = np.exp(1 / distance_matrix) # Softmax --> not really better
+    else:
+        raise RuntimeError("Wrong mode")
+    # prob_matrix[prob_matrix < np.mean(prob_matrix)] = 0 # doesn't help
+    # # OPTION 3: just use softmax
+    # normalize
+    prob_matrix = prob_matrix / np.expand_dims(np.sum(prob_matrix, axis=1), 1)
+    matched = prob_matrix.diagonal()
+
+    return matched * len(matched) # matched has the prob for the informed, * len(matched) = / (1 / len(matched))

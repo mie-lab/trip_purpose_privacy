@@ -13,7 +13,7 @@ if __name__ == "__main__":
     parser.add_argument("-b", "--buffer", default=500, type=int)
     args = parser.parse_args()
     city = args.city
-    data_raw = read_gdf_csv(os.path.join(args.data_path, f"checkin_{city}_features.csv"))
+    data_raw = read_gdf_csv(os.path.join(args.data_path, f"checkin_{city}_features.csv")).reset_index()
     pois = read_poi_geojson(os.path.join(args.data_path, f"pois_{city}_{args.poi_data}.geojson"))
 
     poi_process = POI_processor(data_raw, pois)
@@ -32,7 +32,7 @@ if __name__ == "__main__":
 
     poi_density_per_venue = data_raw.merge(
         count_per_lon_lat, how="left", left_on=["latitude", "longitude"], right_on=["latitude", "longitude"],
-    )[["venue_id", "poi_density"]]
+    )[["id", "label", "poi_density"]]
 
     poi_density_per_venue.to_csv(
         os.path.join(args.data_path, f"poi_density_{args.city}_{args.poi_data}_{args.buffer}.csv"), index=False

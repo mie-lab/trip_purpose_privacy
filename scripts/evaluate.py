@@ -10,7 +10,7 @@ import pandas as pd
 from sklearn.metrics import accuracy_score, balanced_accuracy_score
 
 from foursquare_privacy.plotting import plot_confusion_matrix, user_mae_plot, main_plot
-from foursquare_privacy.utils.user_distribution import get_user_dist_mae, user_identification_accuracy
+from foursquare_privacy.utils.user_distribution import get_user_dist_mae, user_identification_accuracy, privacy_loss
 
 
 def results_to_dataframe(result_dict):
@@ -21,31 +21,49 @@ def results_to_dataframe(result_dict):
         lambda x: int(x.split("_")[-1]) if x not in ["temporal_features", "random_results"] else pd.NA
     )
     result_df["method"] = result_df["method"].apply(lambda x: " ".join(x.split("_")[:-1]))
-    return result_df.sort_values(["obfuscation", "method"])
+    return result_df.sort_values(["method", "obfuscation"])
 
 
 def load_results(base_path, top_k=5):
     files_for_eval = [f for f in os.listdir(base_path) if f.startswith("predictions")]
     # make random file at first
-    any_results_file = pd.read_csv(os.path.join(base_path, files_for_eval[0]))
-    rand_results = baseline_random(any_results_file)
-    rand_results.to_csv(os.path.join(base_path, "predictions_random_results.csv"))
+    if not any(["random" in f for f in files_for_eval]):
+        any_results_file = pd.read_csv(os.path.join(base_path, files_for_eval[0]))
+        rand_results = baseline_random(any_results_file)
+        rand_results.to_csv(os.path.join(base_path, "predictions_random_results.csv"))
 
     files_for_eval = [f for f in os.listdir(base_path) if f.startswith("predictions")]
     result_dict = {}
     for pred in files_for_eval:
+        print(base_path, pred)
         result_df = pd.read_csv(os.path.join(base_path, pred))
         name = pred[12:-4]
+
+        # # Privacy loss tests
+        # if "proba_Dining" not in result_df.columns:
+        #     continue
+        # result_dict[name] = {
+        #     "privacyloss_rank_1": privacy_loss(result_df, p=1, mode="rank"),
+        #     "privacyloss_rank_2": privacy_loss(result_df, p=2, mode="rank"),
+        #     "privacyloss_rank_3": privacy_loss(result_df, p=3, mode="rank"),
+        #     "privacyloss_dist_1": privacy_loss(result_df, p=1, mode="distance"),
+        #     "privacyloss_dist_2": privacy_loss(result_df, p=2, mode="distance"),
+        #     "privacyloss_dist_3": privacy_loss(result_df, p=3, mode="distance"),
+        #     "privacyloss_softmax": privacy_loss(result_df, p=3, mode="softmax"),
+        # }
         acc = accuracy_score(result_df["ground_truth"], result_df["prediction"])
         bal_acc = balanced_accuracy_score(result_df["ground_truth"], result_df["prediction"])
         user_mae = np.mean(get_user_dist_mae(result_df))
         user_identify = user_identification_accuracy(result_df, top_k)
 
-        try:
+        if "proba_Dining" in result_df.columns:
             user_mae_probs = np.mean(get_user_dist_mae(result_df, True))
             user_identify_probs = user_identification_accuracy(result_df, top_k, True)
-        except AssertionError:
-            user_mae_probs, user_identify_probs = pd.NA, pd.NA
+            priv_loss = privacy_loss(result_df, p=1, mode="softmax")
+            loss_mean = np.mean(priv_loss)
+            loss_median = np.median(priv_loss)
+        else:
+            user_mae_probs, user_identify_probs, loss_mean, loss_median = pd.NA, pd.NA, pd.NA, pd.NA
         result_dict[name] = {
             "Accuracy": acc,
             "Balanced accuracy": bal_acc,
@@ -53,6 +71,8 @@ def load_results(base_path, top_k=5):
             "User-wise MAE probs": user_mae_probs,
             "Profile identification": user_identify,
             "Profile identification probs": user_identify_probs,
+            "Privacy loss (mean)": loss_mean,
+            "Privacy loss (median)": loss_median
         }
     return result_dict
 
@@ -118,6 +138,7 @@ def load_save_all_results(base_path="outputs/cluster_runs_all", out_path="output
     ]
     for subdir in os.listdir(base_path):
         if (
+            # subdir != "xgb_foursquare_newyorkcity_user_True_False_True_True_6_10_1" # for testing
             subdir[0] == "."
             or (not os.path.isdir(os.path.join(base_path, subdir)))
             or len(os.listdir(os.path.join(base_path, subdir))) < 1
@@ -133,8 +154,9 @@ def load_save_all_results(base_path="outputs/cluster_runs_all", out_path="output
                 break
             result_df[col] = infos[i]
         results.append(result_df)
-    all_results = pd.concat(results)
-    all_results.to_csv(os.path.join(out_path, "pooled_results.csv"))
+        # save intermediate results
+        all_results = pd.concat(results)
+        all_results.to_csv(os.path.join(out_path, "pooled_results_new.csv"))
 
 
 if __name__ == "__main__":
