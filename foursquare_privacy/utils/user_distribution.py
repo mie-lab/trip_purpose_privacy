@@ -32,6 +32,18 @@ def get_dist_per_user(results, use_probabilities=False):
     # group by user
     gt_user = gt_dummies.groupby(["user_id"]).agg(agg_dict_gt)
     pred_user = pred_dummies.groupby("user_id").agg(agg_dict_pred)
+
+    # # Testing IDF
+    # idf = (
+    #     np.swapaxes(
+    #         np.log(results["user_id"].nunique() / results.groupby("label").agg({"user_id": "nunique"})).values, 1, 0
+    #     )
+    #     * 100
+    # )
+    # # print((gt_user * idf).head())
+    # gt_with_idf = gt_user * idf  # (gt_user.set_index("user_id") * idf).reset_index()
+    # pred_with_idf = pred_user * idf  # (pred_user.set_index("user_id") * idf).reset_index()
+    # return gt_with_idf, pred_with_idf
     return gt_user, pred_user
 
 
@@ -42,6 +54,11 @@ def get_user_dist_mae(results, use_probabilities=False):
 
     mae = np.mean(np.absolute(np.array(gt_user) - np.array(pred_user)), axis=1)
     return mae
+
+
+def get_user_dist_euclidean(results, use_probabilities=True):
+    gt_user, pred_user = get_dist_per_user(results, use_probabilities)
+    return np.sqrt(np.sum((np.array(gt_user) - np.array(pred_user)) ** 2, axis=1))
 
 
 def user_identification_accuracy(results, top_k=5, use_probabilities=False):
@@ -77,7 +94,7 @@ def privacy_loss(results, p=2, mode="rank", use_probabilities=True):
         argsort_matrix = rankdata(distance_matrix, axis=1)
         prob_matrix = (1 / argsort_matrix) ** p
     elif mode == "softmax":
-        prob_matrix = np.exp(1 / distance_matrix) # Softmax --> not really better
+        prob_matrix = np.exp(1 / distance_matrix)  # Softmax activation
     else:
         raise RuntimeError("Wrong mode")
     # prob_matrix[prob_matrix < np.mean(prob_matrix)] = 0 # doesn't help
@@ -85,5 +102,9 @@ def privacy_loss(results, p=2, mode="rank", use_probabilities=True):
     # normalize
     prob_matrix = prob_matrix / np.expand_dims(np.sum(prob_matrix, axis=1), 1)
     matched = prob_matrix.diagonal()
-
-    return matched * len(matched) # matched has the prob for the informed, * len(matched) = / (1 / len(matched))
+    loss_values = matched * len(matched)
+    if np.median(loss_values) < 1 and mode == "softmax":
+        new_res = privacy_loss(results, p=1, mode="distance", use_probabilities=use_probabilities)
+        print("use no softmax", new_res)
+        return new_res
+    return loss_values  # matched has the prob for the informed, * len(matched) = / (1 / len(matched))

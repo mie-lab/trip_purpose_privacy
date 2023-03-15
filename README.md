@@ -1,8 +1,18 @@
-# Trip purpose protection
+# Where you go is who you are - A study on machine learning based semantic privacy attacks
 
-Understanding the predictability of activity purposes and the effect of location protection measures
+This code bases accompanies our paper on semantic privacy attacks (under review), where we aim to quantify the risks for potential attackers to profile users based on their raw location data. To reproduce our results, follow the instructions below.
 
-Preprocessing steps:
+### Installation:
+
+Install the code in a virtual environment by executing the following lines:
+```
+cd trip_purpose_privacy
+python -m venv priv_env
+source priv_env/bin/activate
+pip install -e .
+```
+
+## Preprocessing steps:
 
 ### 1) Make POI taxonomy (NOTE: This first step can be omitted because our taxonomy is on GitHub)
 Download Foursquare POI Taxonomy from [here](https://github.com/Factual/places/blob/master/categories/integrated_places_files/integrated_category_taxonomy.json). Download the json file to the folder [data](data) and rename the json file to `foursquare_taxonomy_raw.json`. We then divide some categories and form a slightly different taxonomy with the following script:

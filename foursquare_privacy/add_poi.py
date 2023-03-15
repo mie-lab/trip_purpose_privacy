@@ -98,7 +98,7 @@ class POI_processor:
         # convert to features
         for poi_col in poi_type_list:
             # distance: now invert --> the closer the POI, the higher the feature value
-            geom_with_poi_feats["feat_dist_" + poi_col] = 200 - geom_with_poi_feats[(poi_col, "min")]
+            geom_with_poi_feats["feat_dist_" + poi_col] = self.buffer - geom_with_poi_feats[(poi_col, "min")]
             # counts: simply copy the column
             geom_with_poi_feats["feat_count_" + poi_col] = geom_with_poi_feats[(poi_col, "agg_x")]
 

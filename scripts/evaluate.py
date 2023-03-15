@@ -10,7 +10,12 @@ import pandas as pd
 from sklearn.metrics import accuracy_score, balanced_accuracy_score
 
 from foursquare_privacy.plotting import plot_confusion_matrix, user_mae_plot, main_plot
-from foursquare_privacy.utils.user_distribution import get_user_dist_mae, user_identification_accuracy, privacy_loss
+from foursquare_privacy.utils.user_distribution import (
+    get_user_dist_mae,
+    user_identification_accuracy,
+    privacy_loss,
+    get_user_dist_euclidean,
+)
 
 
 def results_to_dataframe(result_dict):
@@ -55,15 +60,19 @@ def load_results(base_path, top_k=5):
         bal_acc = balanced_accuracy_score(result_df["ground_truth"], result_df["prediction"])
         user_mae = np.mean(get_user_dist_mae(result_df))
         user_identify = user_identification_accuracy(result_df, top_k)
+        euclid = np.mean(get_user_dist_euclidean(result_df, False))
 
         if "proba_Dining" in result_df.columns:
             user_mae_probs = np.mean(get_user_dist_mae(result_df, True))
             user_identify_probs = user_identification_accuracy(result_df, top_k, True)
             priv_loss = privacy_loss(result_df, p=1, mode="softmax")
-            loss_mean = np.mean(priv_loss)
-            loss_median = np.median(priv_loss)
+            euclid_probs = np.mean(get_user_dist_euclidean(result_df, True))
         else:
-            user_mae_probs, user_identify_probs, loss_mean, loss_median = pd.NA, pd.NA, pd.NA, pd.NA
+            user_mae_probs, user_identify_probs = pd.NA, pd.NA
+            euclid_probs = euclid
+            priv_loss = privacy_loss(result_df, p=1, mode="softmax", use_probabilities=False)
+        loss_mean = np.mean(priv_loss)
+        loss_median = np.median(priv_loss)
         result_dict[name] = {
             "Accuracy": acc,
             "Balanced accuracy": bal_acc,
@@ -72,7 +81,9 @@ def load_results(base_path, top_k=5):
             "Profile identification": user_identify,
             "Profile identification probs": user_identify_probs,
             "Privacy loss (mean)": loss_mean,
-            "Privacy loss (median)": loss_median
+            "Privacy loss (median)": loss_median,
+            "User profiling error": euclid,
+            "User profiling error probs": euclid_probs,
         }
     return result_dict
 

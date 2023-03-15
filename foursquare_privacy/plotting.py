@@ -12,6 +12,7 @@ def poi_dist_plot(label_list, out_path=None, size=(8, 6), title="Foursquare POI 
     plt.bar(uni, counts)
     plt.xticks(rotation=90)
     plt.title(title)
+    plt.ylabel("Count")
     plt.tight_layout()
     if out_path is not None:
         plt.savefig(out_path)
