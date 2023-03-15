@@ -20,7 +20,7 @@ setup(
     author_email=("nwiedemann@ethz.ch"),
     license="MIT",
     url="https://github.com/mie-lab/trip_purpose_privacy",
-    install_requires=["numpy", "xgboost"],
+    install_requires=["numpy", "xgboost", "geopandas", "matplotlib", "scikit-learn", "gensim"],
     classifiers=[
         "License :: OSI Approved :: MIT License",
         "Intended Audience :: Science/Research",

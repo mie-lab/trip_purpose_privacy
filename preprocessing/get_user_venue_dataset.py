@@ -6,6 +6,10 @@ from foursquare_privacy.utils.io import read_gdf_csv
 
 if __name__ == "__main__":
     for city in ["yumuv", "tokyo", "newyorkcity"]:
+        if not os.path.exists(os.path.join("data", f"checkin_{city}.csv")):
+            print("data not available, skip:", city)
+            continue
+
         # for yumuv we don't need to change the venue ID
         correct_venue_id = False if city == "yumuv" else True
 

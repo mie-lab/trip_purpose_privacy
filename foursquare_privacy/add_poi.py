@@ -7,7 +7,12 @@ import gensim
 from gensim.corpora import Dictionary
 from gensim.models import TfidfModel, LdaModel
 from sklearn.neighbors import BallTree
-from spacegraph_codebase.test import embed_points
+
+try:
+    from spacegraph_codebase.test import embed_points
+except ModuleNotFoundError:
+    print("spacegraph_codebase package not found, skipping now, needs to be installed if embed flag is set")
+
 
 from foursquare_privacy.utils.poi_to_pointset import get_poi_id_mapping, table_to_pointset
 

@@ -9,13 +9,20 @@ from sklearn.metrics import accuracy_score, balanced_accuracy_score
 
 from foursquare_privacy.utils.io import read_gdf_csv, read_poi_geojson
 from foursquare_privacy.models.xgb import XGBWrapper
-from foursquare_privacy.models.mlp import MLPWrapper
+
+model_dict = {"xgb": {"model_class": XGBWrapper, "config": {}}}
+try:
+    from foursquare_privacy.models.mlp import MLPWrapper
+
+    model_dict["mlp"]: {"model_class": MLPWrapper, "config": {}}
+except ModuleNotFoundError:
+    print("Torch not installed, skipping now, but needs to be installed to use MLP instead of XGB")
+
 from foursquare_privacy.utils.user_distribution import get_user_dist_mae
 from foursquare_privacy.utils.spatial_folds import user_or_venue_split
 from foursquare_privacy.add_poi import POI_processor, get_embedding, get_closest_poi_feats
 from foursquare_privacy.location_masking import LocationMasker
 
-model_dict = {"xgb": {"model_class": XGBWrapper, "config": {}}, "mlp": {"model_class": MLPWrapper, "config": {}}}
 # xgb config: tree_method="gpu_hist", gpu_id=0 if gpu available
 
 
@@ -123,7 +130,7 @@ if __name__ == "__main__":
         print("Warning: Output directory already exists, may be overwriting files")
     os.makedirs(out_dir, exist_ok=True)
 
-    assert any([args.embed, args.inbuffer, args.closestk, args.lda]), "must define some spatial representation"
+    assert any([args.embed, args.inbuffer, args.closestk, args.lda]), "One of these arguments must be set to true"
 
     # get model
     ModelClass = model_dict[args.model]["model_class"]

@@ -14,26 +14,23 @@ pip install -e .
 
 ## Preprocessing steps:
 
-### 1) Make POI taxonomy (NOTE: This first step can be omitted because our taxonomy is on GitHub)
-Download Foursquare POI Taxonomy from [here](https://github.com/Factual/places/blob/master/categories/integrated_places_files/integrated_category_taxonomy.json). Download the json file to the folder [data](data) and rename the json file to `foursquare_taxonomy_raw.json`. We then divide some categories and form a slightly different taxonomy with the following script:
 
-```
-python preprocessing/convert_foursquare_taxonomy.py 
-```
-
-### 2) Download the Foursquare NYC and Tokyo data [here](https://www-public.it-sudparis.eu/~zhang_da/pub/dataset_tsmc2014.zip) (or simply download the data of section 2 on [this website](https://sites.google.com/site/yangdingqi/home/foursquare-dataset)). Extract the zip file into the [data](data) folder and rename the folder to `foursquare_ny_tokio_raw`.
+### 1) Download the Foursquare NYC and Tokyo data from section 2 [this website](https://sites.google.com/site/yangdingqi/home/foursquare-dataset). Extract the zip file into the [data](data) folder and rename the folder to `foursquare_ny_tokio_raw`.
 
 Execute the following steps to preprocess the data, to add the POI labels according to our taxonomy mentioned above:
 
 ```
 # Preprocess the raw (txt) data into a GeoDataFrame with longitude and latitude
 python preprocessing/preprocess_ny_tokyo.py
+```
 
-# Preprocess Foursquare POIs
+### 2) Preprocess the Foursquare POIs
+
+```
 python preprocessing/preprocess_foursquare_pois.py
 ```
 
-### 3) Preprocess the yumuv data (propriety):
+### 3) Preprocess the yumuv data (propriety - skip this step):
 
 #### 3.1) Download data from database and align with check-in dataset format
 ```
@@ -53,7 +50,7 @@ python preprocessing/get_user_venue_dataset.py
 
 ### 5) Get OSM POIs
 
-Download OSM data with pyrosm package and select and label the relevant ones:
+Download OSM data with pyrosm package (install via `pip install pyrosm`) and select and label the relevant ones:
 ```
 python preprocessing/preprocess_osm_pois.py
 ```
