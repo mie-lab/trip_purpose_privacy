@@ -58,6 +58,41 @@ python preprocessing/preprocess_osm_pois.py
 ## Prediction
 
 ```
-# Cross validation for different masking and user split
-python scripts/run.py     
+python scripts/run.py -h
+
+
+usage: run.py [-h] [-d DATA_PATH] [-c CITY] [-o OUT_DIR]
+              [-p POI_DATA] [-m MODEL] [-x EMBED_MODEL_PATH]
+              [-f FOLD_MODE] [-k KFOLD] [-b BUFFER_FACTOR]
+              [--min_buffer MIN_BUFFER] [--lda] [--embed]
+              [--closestk] [--inbuffer]
+              [--poi_keep_ratio POI_KEEP_RATIO]
+              [--xgbdepth XGBDEPTH]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -d DATA_PATH, --data_path DATA_PATH
+  -c CITY, --city CITY
+  -o OUT_DIR, --out_dir OUT_DIR
+  -p POI_DATA, --poi_data POI_DATA
+  -m MODEL, --model MODEL
+  -x EMBED_MODEL_PATH, --embed_model_path EMBED_MODEL_PATH
+  -f FOLD_MODE, --fold_mode FOLD_MODE
+  -k KFOLD, --kfold KFOLD
+  -b BUFFER_FACTOR, --buffer_factor BUFFER_FACTOR
+  --min_buffer MIN_BUFFER
+  --lda
+  --embed
+  --closestk
+  --inbuffer
+  --poi_keep_ratio POI_KEEP_RATIO
+  --xgbdepth XGBDEPTH
+  ```
+
+  Examples of the commands that we ran for analysis are given in `sh_commands.sh`. However, the --embed flag can not easily be used, since it requires to clone our version of the [space-to-vec code base](https://github.com/gengchenmai/space2vec) that you can get [here](https://github.com/NinaWie/space2vec), and then to train embedding models on the foursquare POI data.
+
+## Evaluation
+
+```
+python scripts/evaluate.py -i outputs/test
 ```
