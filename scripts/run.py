@@ -21,7 +21,7 @@ except ModuleNotFoundError:
 from foursquare_privacy.utils.user_distribution import get_user_dist_mae
 from foursquare_privacy.utils.spatial_folds import user_or_venue_split
 from foursquare_privacy.add_poi import POI_processor, get_embedding, get_closest_poi_feats
-from foursquare_privacy.location_masking import LocationMasker
+from foursquare_privacy.location_masking import LocationMasker, location_dependent_masking
 
 # xgb config: tree_method="gpu_hist", gpu_id=0 if gpu available
 
@@ -106,6 +106,8 @@ if __name__ == "__main__":
     parser.add_argument("-k", "--kfold", default=5, type=int)
     parser.add_argument("-b", "--buffer_factor", default=1.5, type=float)
     # minimum buffer around the location, aside from the buffer factor
+    parser.add_argument("-l", "--masking_neighbor_factor", type=int, default=0)
+    # if location-dependent obfuscation is applied, this is the factor how many neighbors should be in the radius
     parser.add_argument("--min_buffer", default=100, type=float)
     parser.add_argument("--lda", action="store_true")
     parser.add_argument("--embed", action="store_true")
@@ -179,12 +181,17 @@ if __name__ == "__main__":
             continue
         buffering = max(args.buffer_factor * masking, args.min_buffer)
         print(f"-------- Masking {masking} ---------")
-        if masking == 0:
-            data = data_raw.copy()
-            models = []
+        if args.masking_neighbor_factor > 0:
+            # location-dependent masking
+            data = location_dependent_masking(data_raw, pois, k_neighbors=args.masking_neighbor_factor)
         else:
-            masker = LocationMasker(data_raw)
-            data = masker(masking)
+            if masking == 0:
+                data = data_raw.copy()
+                models = []
+            else:
+                # location-static masking by a specific obfuscation
+                masker = LocationMasker(data_raw)
+                data = masker(masking)
             # # double check the latitude difference
             # print(
             #     f"Average latitude difference (masking {masking})",
@@ -240,6 +247,10 @@ if __name__ == "__main__":
         # else:
         #     _, result_df = cross_validation(dataset, folds, models)
         # print_results(result_df, f"all_features_{masking}", out_dir)
+
+        # only do it once if it's location dependent obfuscation
+        if args.masking_neighbor_factor > 0:
+            break
 
     with open(os.path.join(out_dir, "results.json"), "w") as outfile:
         json.dump(results_dict, outfile)
