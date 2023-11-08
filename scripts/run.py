@@ -17,6 +17,7 @@ try:
     model_dict["mlp"]: {"model_class": MLPWrapper, "config": {}}
 except ModuleNotFoundError:
     print("Torch not installed, skipping now, but needs to be installed to use MLP instead of XGB")
+USE_SIMPLE_CATEGORIES = False
 
 from foursquare_privacy.utils.user_distribution import get_user_dist_mae
 from foursquare_privacy.utils.spatial_folds import user_or_venue_split
@@ -90,6 +91,21 @@ def print_results(result_df, name, out_dir):
     results_dict[name] = {"Accuracy": acc, "Balanced accuracy": bal_acc, "User-wise MAE": user_mae}
 
 
+simple_categories = {
+    "Landmarks and Outdoors": "Sports, Landmarks, Outdoors",
+    "Sports and Recreation": "Sports, Landmarks, Outdoors",
+    "Nightlife": "Nightlife, Arts, Entertainment",
+    "Arts and Entertainment": "Nightlife, Arts, Entertainment",
+    "Dining": "Dining, Coffee, Dessert",
+    "Coffee and Dessert": "Dining, Coffee, Dessert",
+    "Business and Professional Services": "Retail, Business, Professional Services",
+    "Retail": "Retail, Business, Professional Services",
+    "Travel and Transportation": "Travel and Transportation",
+    "Education": "Education, Spiritual Center, Health and Medicine",
+    "Spiritual Center": "Education, Spiritual Center, Health and Medicine",
+    "Health and Medicine": "Education, Spiritual Center, Health and Medicine"
+}
+
 results_dict = {}
 
 if __name__ == "__main__":
@@ -141,6 +157,9 @@ if __name__ == "__main__":
 
     # load data
     data_raw = read_gdf_csv(os.path.join(args.data_path, f"checkin_{city}_features.csv"))
+    if USE_SIMPLE_CATEGORIES:
+        data_raw["label"] = data_raw["label"].map(simple_categories)
+
     # convert to id arr
     uni_labels, uni_counts = np.unique(data_raw["label"], return_counts=True)
     label_mapping = {elem: i for i, elem in enumerate(uni_labels)}
@@ -153,6 +172,9 @@ if __name__ == "__main__":
         pois_1, pois_2 = None, None  # free space of variable
     else:
         pois = read_poi_geojson(os.path.join(args.data_path, f"pois_{city}_{args.poi_data}.geojson"))
+    if USE_SIMPLE_CATEGORIES:
+        pois["poi_my_label"] = pois["poi_my_label"].map(simple_categories)
+
     print(f"Using {len(pois)} pois")
     # remove POIs if we want to pretend that the POI quality is worse
     keep_inds_iloc = np.random.permutation(len(pois))[: int(args.poi_keep_ratio * len(pois))]

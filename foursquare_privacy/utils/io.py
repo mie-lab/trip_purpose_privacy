@@ -17,9 +17,8 @@ def txt_to_df(path, encoding="utf-8"):
 
 def read_gdf_csv(path):
     data = pd.read_csv(path, index_col="id")
-    data = gpd.GeoDataFrame(data)
     data["geometry"] = data["geometry"].apply(wkt.loads)
-    data.crs = "EPSG:4326"
+    data = gpd.GeoDataFrame(data, geometry="geometry", crs="EPSG:4326")
     if "newyorkcity" in path or "nyc" in path:
         print("Projecting into NYC CRS")
         data.to_crs("EPSG:32118", inplace=True)
