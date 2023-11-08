@@ -14,7 +14,7 @@ model_dict = {"xgb": {"model_class": XGBWrapper, "config": {}}}
 try:
     from foursquare_privacy.models.mlp import MLPWrapper
 
-    model_dict["mlp"]: {"model_class": MLPWrapper, "config": {}}
+    model_dict["mlp"] = {"model_class": MLPWrapper, "config": {}}
 except ModuleNotFoundError:
     print("Torch not installed, skipping now, but needs to be installed to use MLP instead of XGB")
 USE_SIMPLE_CATEGORIES = False
