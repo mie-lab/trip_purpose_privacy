@@ -1,6 +1,8 @@
 # Where you go is who you are - A study on machine learning based semantic privacy attacks
 
-This code bases accompanies our paper on semantic privacy attacks (under review), where we aim to quantify the risks for potential attackers to profile users based on their raw location data. To reproduce our results, follow the instructions below.
+This code accompanies our [paper](https://doi.org/10.1186/s40537-024-00888-8) on semantic privacy attacks, titled **Where you go is who you are - A study on machine learning based semantic privacy attacks**, published in the *Journal of Big Data*.
+
+In this work, we aim to quantify the risks for potential attackers to profile users based on their raw location data, i.e. to find out their interest in different types of places. To reproduce our results, follow the instructions below.
 
 ### Installation:
 
@@ -95,4 +97,23 @@ optional arguments:
 
 ```
 python scripts/evaluate.py -i outputs/test
+```
+
+## Citation
+
+If you build up on this work, please consider citing our paper:
+
+Wiedemann, N., Janowicz, K., Raubal, M. et al. Where you go is who you are: a study on machine learning based semantic privacy attacks. J Big Data 11, 39 (2024).
+
+```bib
+@article{wiedemann2024you,
+  title={Where you go is who you are: a study on machine learning based semantic privacy attacks},
+  author={Wiedemann, Nina and Janowicz, Krzysztof and Raubal, Martin and Kounadi, Ourania},
+  journal={Journal of Big Data},
+  volume={11},
+  number={1},
+  pages={39},
+  year={2024},
+  publisher={Springer}
+}
 ```

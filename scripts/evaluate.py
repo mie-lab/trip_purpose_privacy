@@ -62,7 +62,7 @@ def load_results(base_path, top_k=5):
         user_identify = user_identification_accuracy(result_df, top_k)
         euclid = np.mean(get_user_dist_euclidean(result_df, False))
 
-        if "proba_Dining" in result_df.columns:
+        if any([col.startswith("proba_") for col in result_df.columns]):
             user_mae_probs = np.mean(get_user_dist_mae(result_df, True))
             user_identify_probs = user_identification_accuracy(result_df, top_k, True)
             priv_loss = privacy_loss(result_df, p=1, mode="softmax")
@@ -167,7 +167,7 @@ def load_save_all_results(base_path="outputs/cluster_runs_all", out_path="output
         results.append(result_df)
         # save intermediate results
         all_results = pd.concat(results)
-        all_results.to_csv(os.path.join(out_path, "pooled_results_new.csv"))
+        all_results.to_csv(os.path.join(out_path, "pooled_results.csv"))
 
 
 if __name__ == "__main__":
